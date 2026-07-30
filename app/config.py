@@ -5,6 +5,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class Settings:
     database_url: str
+    app_database_url: str
     redis_url: str
     worker_heartbeat_interval_seconds: float
     worker_heartbeat_stale_after_seconds: float
@@ -14,6 +15,11 @@ class Settings:
         return cls(
             database_url=os.environ.get(
                 "DATABASE_URL", "postgresql://cmis:cmis@postgres:5432/cmis"
+            ),
+            # Non-superuser role (migration 0003) used for every tenant-scoped
+            # connection — superusers bypass RLS unconditionally.
+            app_database_url=os.environ.get(
+                "APP_DATABASE_URL", "postgresql://cmis_app:cmis_app@postgres:5432/cmis"
             ),
             redis_url=os.environ.get("REDIS_URL", "redis://redis:6379/0"),
             worker_heartbeat_interval_seconds=float(

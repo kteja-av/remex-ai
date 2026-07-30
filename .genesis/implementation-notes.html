@@ -33,17 +33,19 @@
   <p class="sub"><b>Rolling source of truth for what is LIVE right now.</b> The wiki can lag; this file
      cannot. Read this on every session start to avoid rebuilding what exists. This is your
      <i>git-like restart point</i>: if context is lost, this file rehydrates you.
-     Last updated: <code>2026-07-30</code> · by loop: <code>L1 BUILD M1 (done) → next L1 BUILD M2</code></p>
+     Last updated: <code>2026-07-30</code> · by loop: <code>L1 BUILD M2 (done) → next L1 BUILD M3</code></p>
 
   <!-- ───────────── ONE-LINE STATUS ───────────── -->
   <div class="card live">
-    <b>M1 DONE:</b> Compose skeleton + health check shipped — postgres+pgvector, redis, api, and a
-    separate no-op heartbeat worker; <code>GET /v1/health</code> reports real per-dependency status
-    (fail-open: 200 <code>degraded</code>, never 5xx). L4 VERIFY APPROVE + quiz-me Q+A logged.<br>
-    <b>Active loop:</b> NONE (next: L1 BUILD on M2) · <b>Current milestone:</b> M2 — Typed memory schema +
-    migrations + RLS · <b>Phase:</b> 14 Data Engineering (+11 Security)<br>
-    <b>Blocked on:</b> nothing. M1 work on branch <code>M1</code> pending commit/merge/push
-    (awaiting user approval for git operations).
+    <b>M2 DONE:</b> Typed memory schema + migrations + RLS shipped — <code>memories</code> +
+    <code>memory_audit</code> tables (Alembic 0001–0003), RLS enabled <i>and forced</i> with a
+    tenant-GUC policy, request path on non-superuser role <code>cmis_app</code>. Cross-tenant
+    reads/writes provably blocked; unscoped SELECT returns zero rows; migrations rerunnable
+    (incl. <code>downgrade base</code>). L4 VERIFY APPROVE (28 adversarial probes held) + quiz-me Q+A logged.<br>
+    <b>Active loop:</b> NONE (next: L1 BUILD on M3) · <b>Current milestone:</b> M3 — Naive write +
+    vector retrieval baseline · <b>Phase:</b> 6 Memory Architecture<br>
+    <b>Blocked on:</b> nothing. M2 L4 follow-ups for M3 scope: #4 (<code>SET LOCAL</code> before pooling)
+    and #9 (invert RLS invariant to all-public-tables).
   </div>
 
   <!-- ───────────── WHAT'S LIVE ───────────── -->
@@ -57,6 +59,12 @@
           <td><code>docker-compose.yml</code> · <code>Dockerfile</code> · <code>app/api/routes_health.py</code> (<code>GET /v1/health</code>) · <code>app/api/main.py</code> (lifespan <code>CREATE EXTENSION vector</code>) · <code>app/config.py</code> · <code>app/db/session.py</code> · <code>worker/main.py</code> + <code>worker/heartbeat.py</code> (Redis key <code>cmis:worker:heartbeat</code>, 5s interval / 15s stale)</td>
           <td><span class="pill live">LIVE</span></td>
           <td>demo command exit 0 (8/8) · ruff+mypy clean · L4 VERIFY APPROVE (claude-opus-5-thinking-high, falsification probes passed) · Q+A in <code>checkpoints/M1.md</code></td>
+        </tr>
+        <tr>
+          <td>M2 — Typed memory schema + migrations + row-level security (memories, memory_audit, tenant GUC policy, cmis_app role)</td>
+          <td><code>alembic.ini</code> · <code>migrations/env.py</code> + <code>versions/0001_pgvector_extension.py</code> (Alembic now owns CREATE EXTENSION; M1 lifespan bootstrap removed) · <code>versions/0002_memories_audit_rls.py</code> (tables + ENABLE/FORCE RLS + tenant policies) · <code>versions/0003_app_role.py</code> (non-superuser <code>cmis_app</code>) · <code>app/db/models.py</code> (<code>MemoryRecord</code>, <code>AuditEventRecord</code>) · <code>app/domain/memory.py</code> (<code>MemoryType</code>/<code>MemoryStatus</code>/<code>AuditEvent</code> enums) · <code>app/db/session.py</code> (<code>get_tenant_connection</code> via <code>APP_DATABASE_URL</code>, GUC <code>app.current_tenant</code>) · <code>tests/conftest.py</code> (session-autouse <code>alembic upgrade head</code>)</td>
+          <td><span class="pill live">LIVE</span></td>
+          <td>demo command exit 0 (11/11) · full suite 19/19 · ruff+mypy clean · <code>downgrade -1 && upgrade head</code> and <code>downgrade base</code> rebuild both exit 0 · L4 VERIFY APPROVE (28 adversarial probes: GUC injection, forged-tenant DML, privilege escalation — all blocked) · Q+A in <code>checkpoints/M2.md</code></td>
         </tr>
       </tbody>
     </table>
@@ -95,7 +103,8 @@
   <h2>Known gaps &amp; the ordered Next list</h2>
   <div class="card">
     <ol>
-      <li>M2 G0 pre-flight, then L1 BUILD — Alembic migrations, <code>app/db/models.py</code>, <code>app/domain/memory.py</code>, RLS on every memory-bearing table, <code>tests/acceptance/test_m2_rls.py</code> + <code>tests/invariants/test_rls_enforced.py</code>. Alembic takes over <code>CREATE EXTENSION vector</code> from the M1 lifespan (L4 follow-up 5).</li>
+      <li>M3 G0 pre-flight, then L1 BUILD — local <code>sentence-transformers</code> encoder, vector-only retrieval, <code>POST /v1/memories</code> + <code>GET /v1/memories:retrieve</code>, <code>deps_auth</code>, evals baseline JSON. Take M2 L4 follow-ups #4 (<code>SET LOCAL</code> before pooling) and #9 (invert RLS invariant to all-public-tables) into scope.</li>
+      <li>Non-blocking L4 follow-ups from M2 (see <code>checkpoints/M2.md</code>): audit append-only enforcement by M6; FK existence oracle → composite <code>(tenant_id, id)</code> FK by M9; validate tenant UUID at boundary; parameterize 0003 role name/password; user-level policy in M9; <code>updated_at</code> trigger; embedding index with M3.</li>
       <li>Non-blocking L4 follow-ups from M1 (fix in M2/M5, see <code>checkpoints/M1.md</code>): worker healthcheck 30s vs 15s drift; shared <code>image:</code> tag for api/worker; centralize <code>HEARTBEAT_KEY</code> in <code>app/config.py</code>; invariant test should parse compose YAML and catch transitive imports.</li>
       <li>Remaining deferred invariant tests land with their milestone (fail-open → M4, PII/provenance → M5).</li>
     </ol>
