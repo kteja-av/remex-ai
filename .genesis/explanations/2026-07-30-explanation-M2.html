@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M2 — Typed Memory Schema + Migrations + Row-Level Security · remex-ai</title>
+<style>
+  :root {
+    --bg: #0f141b; --panel: #171e28; --panel2: #1d2634; --ink: #e6ecf3;
+    --muted: #9fb0c3; --accent: #5fb0ff; --ok: #43c98a; --bad: #ff6b6b;
+    --warn: #ffcf5c; --border: #2b3a4d; --code-bg: #0a0e14;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.65; font-size: 16px;
+  }
+  main { max-width: 880px; margin: 0 auto; padding: 32px 20px 96px; }
+  h1 { font-size: 1.9rem; line-height: 1.25; margin: 0 0 8px; }
+  h2 { font-size: 1.4rem; margin: 48px 0 16px; padding-top: 24px; border-top: 2px solid var(--border); }
+  h3 { font-size: 1.1rem; margin: 28px 0 10px; color: var(--accent); }
+  p { margin: 10px 0; }
+  a { color: var(--accent); }
+  code {
+    background: var(--panel2); padding: 2px 6px; border-radius: 5px;
+    font-family: "Cascadia Code", "JetBrains Mono", Consolas, monospace; font-size: 0.88em;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; overflow-x: auto; white-space: pre; font-size: 0.86rem; line-height: 1.5;
+  }
+  pre code { background: none; padding: 0; }
+  .subtitle { color: var(--muted); margin-bottom: 28px; }
+  .toc {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 22px; margin: 24px 0 8px;
+  }
+  .toc ol { margin: 8px 0 4px; padding-left: 22px; }
+  .toc li { margin: 6px 0; }
+  .callout {
+    border-left: 4px solid var(--accent); background: var(--panel);
+    border-radius: 0 10px 10px 0; padding: 12px 16px; margin: 16px 0;
+  }
+  .callout.def { border-color: var(--accent); }
+  .callout.inv { border-color: var(--ok); }
+  .callout.edge { border-color: var(--warn); }
+  .callout b.tag { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .callout.def b.tag { color: var(--accent); }
+  .callout.inv b.tag { color: var(--ok); }
+  .callout.edge b.tag { color: var(--warn); }
+  .flow { display: flex; flex-direction: column; gap: 0; margin: 18px 0; }
+  .node {
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 16px; text-align: center;
+  }
+  .node b { display: block; }
+  .node small { color: var(--muted); }
+  .arrow {
+    text-align: center; color: var(--muted); font-size: 0.85rem; padding: 4px 0;
+  }
+  .arrow::before { content: "\2193  "; color: var(--accent); font-size: 1rem; }
+  .lane {
+    display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: stretch; margin: 18px 0;
+  }
+  .lane .side { background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; }
+  .lane .via { align-self: center; text-align: center; color: var(--muted); font-size: 0.82rem; }
+  .lane .via b { color: var(--accent); display: block; font-size: 1.1rem; }
+  .before-after {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 18px 0;
+  }
+  .before-after .panel {
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px;
+  }
+  .before-after .panel h4 { margin: 0 0 8px; font-size: 0.9rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .before-after .panel.bad { border-color: var(--bad); }
+  .before-after .panel.good { border-color: var(--ok); }
+  table.map { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.92rem; }
+  table.map th, table.map td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
+  table.map th { background: var(--panel2); }
+  .fileref { color: var(--warn); font-size: 0.85rem; }
+  .quiz-q {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px 20px; margin: 22px 0;
+  }
+  .quiz-q h4 { margin: 0 0 12px; font-size: 1.02rem; }
+  .quiz-q button.opt {
+    display: block; width: 100%; text-align: left; margin: 8px 0; padding: 11px 14px;
+    background: var(--panel2); color: var(--ink); border: 1px solid var(--border);
+    border-radius: 9px; cursor: pointer; font-size: 0.94rem; font-family: inherit; line-height: 1.5;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .quiz-q button.opt:hover:not(:disabled) { border-color: var(--accent); }
+  .quiz-q button.opt:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .quiz-q button.opt:disabled { cursor: default; opacity: 0.85; }
+  .quiz-q button.opt.correct { border-color: var(--ok); background: rgba(67, 201, 138, 0.12); }
+  .quiz-q button.opt.wrong { border-color: var(--bad); background: rgba(255, 107, 107, 0.1); }
+  .quiz-q .mark { font-weight: 700; margin-right: 6px; }
+  .quiz-q .mark.c { color: var(--ok); }
+  .quiz-q .mark.w { color: var(--bad); }
+  .feedback {
+    display: none; margin-top: 12px; padding: 12px 14px; border-radius: 9px;
+    background: var(--panel2); border: 1px solid var(--border); font-size: 0.93rem;
+  }
+  .feedback.show { display: block; }
+  .feedback b.verdict-ok { color: var(--ok); }
+  .feedback b.verdict-no { color: var(--bad); }
+  @media (max-width: 640px) {
+    .lane, .before-after { grid-template-columns: 1fr; }
+    .lane .via { padding: 2px 0; }
+    pre { white-space: pre-wrap; word-break: break-word; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+<h1>M2 — Typed Memory Schema + Migrations + Row-Level Security</h1>
+<p class="subtitle">remex-ai · milestone M2 · branch <code>M2</code> · verified 2026-07-30 · 11 new tests, 3 Alembic migrations</p>
+
+<p>M1 gave us a running stack and a health probe. M2 lays the <em>data foundation</em> for the Cognitive Memory Intelligence System (CMIS): typed <code>memories</code> and <code>memory_audit</code> tables, Alembic-owned schema (including the pgvector extension), Python dataclasses that mirror the schema, and PostgreSQL row-level security (RLS) so tenant isolation is enforced by the database — not only by application code. The milestone also fixed a subtle but critical bug: connecting as a superuser silently bypasses RLS even when it is enabled and forced.</p>
+
+<nav class="toc">
+  <b>Contents</b>
+  <ol>
+    <li><a href="#background">Background — what existed before M2</a></li>
+    <li><a href="#intuition">Intuition — tenant isolation at the database layer</a></li>
+    <li><a href="#code">Code walkthrough — migrations, models, connections, tests</a></li>
+    <li><a href="#quiz">Quiz — check your understanding</a></li>
+  </ol>
+</nav>
+
+<!-- ── 1. BACKGROUND ── -->
+<h2 id="background">1. Background</h2>
+
+<h3>1.1 Mental model: what is CMIS building?</h3>
+<p>CMIS is a multi-tenant memory service for AI agents. Each <strong>tenant</strong> (an organization or workspace) stores <strong>memory records</strong> — facts, episodes, and procedures the agent learned — along with an <strong>audit trail</strong> explaining why each memory was admitted, updated, or retired. Every durable write must carry <strong>provenance</strong> (<code>source_turn_ids</code>): which conversation turns produced this memory. Later milestones will add APIs, a write gate, and vector search; M2 only creates the schema and proves the isolation contract.</p>
+
+<div class="callout def">
+  <b class="tag">Definition — Row-Level Security (RLS)</b>
+  A PostgreSQL feature that attaches a <em>policy</em> to a table. Every query — SELECT, INSERT, UPDATE, DELETE — is filtered through that policy. Rows that fail the policy are invisible (reads) or rejected (writes). RLS runs inside the database engine, so even a buggy application cannot accidentally return another tenant's rows if the policy is correct and the connection is not privileged enough to bypass it.
+</div>
+
+<h3>1.2 What M1 left behind</h3>
+<p>After M1 the stack had Postgres (pgvector image), Redis, a FastAPI api, and a worker — but <em>no tables</em>. The pgvector extension was created at API startup via a FastAPI <code>lifespan</code> hook. That was acceptable bootstrap debt; M2 moves schema ownership to Alembic and removes the lifespan hook entirely.</p>
+
+<table class="map">
+  <caption>State at M1 vs M2</caption>
+  <tr><th>Concern</th><th>M1</th><th>M2</th></tr>
+  <tr><td>Database tables</td><td>none</td><td><code>memories</code>, <code>memory_audit</code></td></tr>
+  <tr><td>pgvector extension</td><td>API lifespan <code>CREATE EXTENSION</code></td><td>Alembic migration <code>0001</code></td></tr>
+  <tr><td>Tenant isolation</td><td>not applicable</td><td>RLS policies on both tables</td></tr>
+  <tr><td>App DB role</td><td>single <code>cmis</code> superuser</td><td><code>cmis</code> (owner/migrations) + <code>cmis_app</code> (request path)</td></tr>
+  <tr><td>Python models</td><td>none</td><td><code>MemoryRecord</code>, <code>AuditEventRecord</code> dataclasses</td></tr>
+</table>
+
+<h3>1.3 Binding decisions</h3>
+<ul>
+  <li><strong>ADR-0001</strong> — Postgres + pgvector as the single engine; embeddings are <code>vector(384)</code>.</li>
+  <li><strong>ADR-0006</strong> — RLS on every memory-bearing table; <code>FORCE ROW LEVEL SECURITY</code> so the table owner cannot bypass policies.</li>
+  <li><strong>Design doc</strong> — per-record fields: id, tenant/user id, type, content, embedding, source turn ids, timestamps, importance/decay weights, status, supersedes link, write-gate decision trace.</li>
+  <li><strong>Threat model §4</strong> — audit log is append-only in intent; every event carries actor, timestamp, and source turn ids.</li>
+</ul>
+
+<div class="callout inv">
+  <b class="tag">Invariant introduced</b>
+  <code>tenant_isolation_is_db_enforced</code> — tested by behavioral probes in <code>tests/acceptance/test_m2_rls.py</code> and catalog assertions in <code>tests/invariants/test_rls_enforced.py</code>. A companion invariant (<code>no_durable_write_without_provenance</code>) is partially enforced now via <code>NOT NULL</code> on <code>source_turn_ids</code>; the full invariant test lands in M5.
+</div>
+
+<!-- ── 2. INTUITION ── -->
+<h2 id="intuition">2. Intuition</h2>
+
+<h3>2.1 The core idea: one role, one policy, session-scoped tenant</h3>
+<p>Instead of creating a separate PostgreSQL role per tenant (expensive DDL, hard to operate), CMIS uses <em>one shared application role</em> (<code>cmis_app</code>) and sets a per-connection configuration variable — a <strong>GUC</strong> (Grand Unified Configuration) — called <code>app.current_tenant</code> before any query runs. Every RLS policy compares <code>tenant_id</code> on the row against that GUC:</p>
+
+<pre><code>tenant_id = nullif(current_setting('app.current_tenant', true), '')::uuid</code></pre>
+
+<p>The policy appears on both <code>USING</code> (reads/updates/deletes) and <code>WITH CHECK</code> (inserts/updates), so a connection claiming tenant A cannot read tenant B's rows <em>or</em> insert a row stamped with tenant B's id.</p>
+
+<h3>2.2 Toy example: two tenants, one table</h3>
+<p>Suppose the database holds three rows after seeding (done by the owner role with RLS temporarily off):</p>
+
+<table class="map">
+  <tr><th>id</th><th>tenant_id</th><th>content</th></tr>
+  <tr><td>a1</td><td>tenant-A</td><td>"tenant A fact one"</td></tr>
+  <tr><td>a2</td><td>tenant-A</td><td>"tenant A fact two"</td></tr>
+  <tr><td>b1</td><td>tenant-B</td><td>"tenant B secret"</td></tr>
+</table>
+
+<p>When the application opens a connection for tenant A:</p>
+
+<div class="flow" role="img" aria-label="Request path sets GUC then queries">
+  <div class="node"><b>get_tenant_connection("tenant-A")</b><small>connect as cmis_app via APP_DATABASE_URL</small></div>
+  <div class="arrow">set_config('app.current_tenant', 'tenant-A', false)</div>
+  <div class="node"><b>SELECT * FROM memories</b><small>RLS policy: tenant_id = 'tenant-A'::uuid</small></div>
+  <div class="arrow">returns rows a1, a2 only</div>
+  <div class="node"><b>Result: 2 rows</b><small>tenant B's b1 is invisible</small></div>
+</div>
+
+<p>If the GUC is never set (or set to empty string), the policy evaluates to <code>NULL</code> — no row matches — and the query returns <strong>zero rows</strong>. That is <em>fail-closed</em>: safer than returning everything or throwing errors on every read.</p>
+
+<h3>2.3 Why two database roles?</h3>
+<p>Iter 1's tests failed even though RLS was enabled, forced, and policies existed. Root cause: <code>cmis</code> (the default <code>POSTGRES_USER</code>) is a <strong>superuser</strong>, and superusers bypass RLS unconditionally — <code>FORCE ROW LEVEL SECURITY</code> only binds the <em>table owner</em>, not superusers.</p>
+
+<div class="before-after" role="img" aria-label="Before and after the cmis_app role fix">
+  <div class="panel bad">
+    <h4>Before (iter 1)</h4>
+    <p>App connects as <code>cmis</code> (superuser)</p>
+    <p>RLS policies exist but are <strong>ignored</strong></p>
+    <p>Tenant A sees tenant B's rows</p>
+  </div>
+  <div class="panel good">
+    <h4>After (iter 2, migration 0003)</h4>
+    <p>App connects as <code>cmis_app</code> (non-superuser)</p>
+    <p>RLS policies <strong>enforced</strong></p>
+    <p>Cross-tenant reads and forged inserts blocked</p>
+  </div>
+</div>
+
+<div class="callout edge">
+  <b class="tag">Edge case — catalog vs enforcement</b>
+  The invariant test <code>test_rls_enabled_and_forced_on_every_memory_bearing_table</code> checks <code>pg_class</code> and <code>pg_policies</code> — it proves RLS is <em>configured</em>. Only behavioral tests through <code>get_tenant_connection</code> prove RLS is <em>enforced</em>. If someone points <code>APP_DATABASE_URL</code> back at the superuser, catalog tests stay green while isolation tests go red.
+</div>
+
+<h3>2.4 Load-bearing details in the policy</h3>
+<table class="map">
+  <tr><th>Construct</th><th>What it does</th><th>If removed</th></tr>
+  <tr>
+    <td><code>current_setting(..., true)</code></td>
+    <td>Second arg <code>true</code> = missing_ok: unset GUC returns NULL instead of error</td>
+    <td>Unset GUC → error on every query (still closed, but noisy)</td>
+  </tr>
+  <tr>
+    <td><code>nullif(..., '')</code></td>
+    <td>Treats empty string GUC as NULL</td>
+    <td><code>''::uuid</code> raises <code>InvalidTextRepresentation</code></td>
+  </tr>
+  <tr>
+    <td><code>FORCE ROW LEVEL SECURITY</code></td>
+    <td>Table owner (<code>cmis</code>) also subject to policies</td>
+    <td>Owner connections bypass RLS (migrations would need extra care)</td>
+  </tr>
+  <tr>
+    <td><code>WITH CHECK</code></td>
+    <td>Validates <code>tenant_id</code> on INSERT/UPDATE</td>
+    <td>Attacker could INSERT rows for another tenant</td>
+  </tr>
+</table>
+
+<h3>2.5 Known follow-ups (not bugs in M2, but real)</h3>
+<ul>
+  <li><strong>Connection pooling (M3)</strong> — <code>set_config(..., is_local=false)</code> is session-scoped; a pooled connection can leak the previous tenant's GUC. Fix: <code>SET LOCAL</code> before M3/M4 pool.</li>
+  <li><strong>Audit mutability (M6)</strong> — <code>cmis_app</code> has UPDATE+DELETE on <code>memory_audit</code>; a tenant can forge its own audit history until grants are tightened.</li>
+  <li><strong>FK oracle (M9)</strong> — FK checks on <code>supersedes</code> bypass RLS; composite <code>(tenant_id, id)</code> FK planned.</li>
+</ul>
+
+<!-- ── 3. CODE ── -->
+<h2 id="code">3. Code walkthrough</h2>
+<p>Changes are ordered by dependency: migrations create schema and roles, domain types define contracts, session helpers wire connections, tests prove behavior.</p>
+
+<h3>3.1 Alembic bootstrap <span class="fileref">alembic.ini · migrations/env.py · tests/conftest.py</span></h3>
+<p>Alembic is added for schema versioning only — runtime queries still use raw <code>psycopg</code>, not SQLAlchemy ORM. <code>migrations/env.py</code> reads <code>DATABASE_URL</code> (the owner role) and converts it to SQLAlchemy's <code>postgresql+psycopg://</code> dialect. A session-scoped pytest fixture runs <code>alembic upgrade head</code> before any DB-touching test, so every test starts from a migrated database.</p>
+
+<pre><code># tests/conftest.py
+@pytest.fixture(scope="session", autouse=True)
+def migrated_db() -> None:
+    command.upgrade(Config("alembic.ini"), "head")</code></pre>
+
+<h3>3.2 Migration 0001 — pgvector extension <span class="fileref">migrations/versions/0001_pgvector_extension.py</span></h3>
+<p>Replaces M1's lifespan bootstrap. The extension must exist before the <code>memories.embedding vector(384)</code> column can be created in 0002.</p>
+
+<pre><code>def upgrade() -> None:
+    op.execute("CREATE EXTENSION IF NOT EXISTS vector")</code></pre>
+
+<p>The API no longer self-heals schema. An unmigrated database reports <code>pgvector: false</code> in <code>GET /v1/health</code> — migration drift is visible instead of hidden.</p>
+
+<h3>3.3 Migration 0002 — tables + RLS <span class="fileref">migrations/versions/0002_memories_audit_rls.py</span></h3>
+<p>Creates <code>memories</code> with all design-doc fields: typed CHECK constraints on <code>type</code> and <code>status</code>, bounded <code>importance</code>/<code>decay_weight</code>, non-null <code>source_turn_ids</code>, optional <code>embedding vector(384)</code>, self-referential <code>supersedes</code>, and <code>write_gate_decision jsonb</code> for future write-gate traces.</p>
+
+<p>Creates <code>memory_audit</code> with event CHECK (<code>admit</code>, <code>reject</code>, <code>update</code>, etc.), non-null provenance, and optional <code>detail jsonb</code>.</p>
+
+<p>For each table:</p>
+<pre><code>ALTER TABLE memories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE memories FORCE ROW LEVEL SECURITY;
+CREATE POLICY memories_tenant_isolation ON memories
+  USING (tenant_id = nullif(current_setting('app.current_tenant', true), '')::uuid)
+  WITH CHECK (tenant_id = nullif(current_setting('app.current_tenant', true), '')::uuid);</code></pre>
+
+<h3>3.4 Migration 0003 — non-superuser app role <span class="fileref">migrations/versions/0003_app_role.py</span></h3>
+<p>Creates <code>cmis_app LOGIN</code> (idempotent via <code>DO $$ ... IF NOT EXISTS</code>), grants schema USAGE and DML on both tables, and sets default privileges so future tables created by <code>cmis</code> auto-grant to <code>cmis_app</code>.</p>
+
+<div class="lane" role="img" aria-label="Two-role split">
+  <div class="side">
+    <b>cmis (owner)</b>
+  <small>DATABASE_URL</small>
+  <p>Alembic migrations<br>Test seeding with <code>SET LOCAL row_security = off</code><br>Catalog invariant checks</p>
+  </div>
+  <div class="via"><b>same DB</b>different privileges</div>
+  <div class="side">
+    <b>cmis_app (app)</b>
+  <small>APP_DATABASE_URL</small>
+  <p><code>get_tenant_connection</code><br>RLS enforced<br>Cannot bypass policies</p>
+  </div>
+</div>
+
+<h3>3.5 Domain types and dataclasses <span class="fileref">app/domain/memory.py · app/db/models.py</span></h3>
+<p><code>MemoryType</code>, <code>MemoryStatus</code>, and <code>AuditEvent</code> are <code>StrEnum</code>s mirroring the SQL CHECK constraints — the database and Python agree on allowed values. <code>MemoryRecord</code> and <code>AuditEventRecord</code> are frozen dataclasses with <code>__post_init__</code> validation:</p>
+
+<pre><code>@dataclass(frozen=True)
+class MemoryRecord:
+    ...
+    def __post_init__(self) -> None:
+        validate_weight("importance", self.importance)
+        validate_weight("decay_weight", self.decay_weight)
+        if not self.source_turn_ids:
+            raise ValueError("source_turn_ids must be non-empty ...")</code></pre>
+
+<p><code>from_row()</code> classmethods bridge psycopg dict rows (including JSONB fields that may arrive as strings) into typed Python objects — this is what API handlers will use in later milestones.</p>
+
+<h3>3.6 Tenant-scoped connections <span class="fileref">app/db/session.py · app/config.py · docker-compose.yml</span></h3>
+
+<pre><code>TENANT_GUC = "app.current_tenant"
+
+def get_tenant_connection(tenant_id: str, connect_timeout: int = 2) -> psycopg.Connection:
+    conn = psycopg.connect(settings.app_database_url, connect_timeout=connect_timeout)
+    conn.execute("SELECT set_config(%s, %s, false)", (TENANT_GUC, tenant_id))
+    return conn</code></pre>
+
+<p><code>Settings</code> now carries two URLs: <code>database_url</code> (owner) and <code>app_database_url</code> (non-superuser). Docker Compose wires both via environment variables with dev defaults.</p>
+
+<h3>3.7 API lifespan removed <span class="fileref">app/api/main.py</span></h3>
+<p>M2's <code>main.py</code> is a plain FastAPI app with no lifespan hook — schema is Alembic's job. Comment documents the contract: run <code>alembic upgrade head</code> before serving.</p>
+
+<h3>3.8 Tests <span class="fileref">tests/acceptance/test_m2_rls.py · tests/invariants/test_rls_enforced.py</span></h3>
+<p><strong>Acceptance (7 tests)</strong> seed two tenants via the owner role, then exercise the request path:</p>
+<ul>
+  <li>tenant A sees only A's memories; tenant B sees only B's</li>
+  <li>empty GUC → zero rows on both tables (fail-closed)</li>
+  <li>audit rows are tenant-scoped</li>
+  <li>cross-tenant INSERT rejected by WITH CHECK</li>
+  <li><code>MemoryRecord.from_row</code> round-trips defaults</li>
+  <li><code>source_turn_ids NOT NULL</code> enforced at DB level</li>
+</ul>
+
+<p>The <code>seeded</code> fixture uses <strong>fresh UUIDs per test</strong> (iter-2 fix for cross-test contamination) and tears down only its own rows in FK order (audit before memories).</p>
+
+<p><strong>Invariants (4 tests)</strong> discover memory-bearing tables by name pattern, assert <code>relrowsecurity</code> + <code>relforcerowsecurity</code> + tenant policies covering all verbs, and parametrize a forged-tenant probe across both tables.</p>
+
+<h2 id="quiz">4. Quiz</h2>
+<p>Five questions. Pick an answer to see immediate feedback with the reasoning.</p>
+
+<div id="quiz-root"></div>
+
+</main>
+<script>
+(function () {
+  "use strict";
+  var QUESTIONS = [
+    {
+      q: "Why does get_tenant_connection use APP_DATABASE_URL (cmis_app) instead of DATABASE_URL (cmis)?",
+      opts: [
+        { t: "cmis_app has a smaller connection pool limit, which reduces lock contention under RLS", ok: false,
+          why: "Pool limits are unrelated. The split is about privilege: cmis is a superuser and superusers bypass RLS unconditionally, even with FORCE ROW LEVEL SECURITY." },
+        { t: "cmis_app is required because PostgreSQL RLS policies only apply to roles created after the policy", ok: false,
+          why: "RLS applies to any non-bypass role. The issue is superuser privilege, not role creation order." },
+        { t: "cmis is a superuser and bypasses RLS unconditionally; cmis_app is a non-superuser role so policies are actually enforced on the request path", ok: true,
+          why: "Iter 1 proved this: relrowsecurity and policies were present but tenant A still saw tenant B's rows. Migration 0003 creates cmis_app; get_tenant_connection connects through APP_DATABASE_URL." },
+        { t: "DATABASE_URL is reserved for Alembic offline mode and cannot be used at runtime", ok: false,
+          why: "DATABASE_URL is used at runtime by get_connection (owner role) for migrations, seeding, and catalog checks. The request path deliberately uses a different, less privileged URL." }
+      ]
+    },
+    {
+      q: "A connection opens via get_tenant_connection but never sets app.current_tenant (GUC unset). What does SELECT * FROM memories return?",
+      opts: [
+        { t: "Zero rows — the policy compares tenant_id to NULL, which matches nothing (fail-closed)", ok: true,
+          why: "current_setting('app.current_tenant', true) with missing_ok returns NULL when unset. nullif folds empty strings to NULL too. tenant_id = NULL is unknown, so no row passes the USING clause." },
+        { t: "All rows — without a tenant filter the query runs unscoped", ok: false,
+          why: "RLS is always active for cmis_app. An unset GUC does not disable the policy; it makes the predicate NULL, which filters everything out." },
+        { t: "A PostgreSQL error on every SELECT because the GUC is mandatory", ok: false,
+          why: "The true (missing_ok) argument deliberately avoids errors on unset GUCs. You get an empty result set, not an exception storm." },
+        { t: "Only rows where tenant_id IS NULL, since the comparison is to NULL", ok: false,
+          why: "In SQL, NULL = anything evaluates to NULL (unknown), not TRUE. No row satisfies the policy, so the result is empty." }
+      ]
+    },
+    {
+      q: "Tenant A's connection runs INSERT INTO memories (tenant_id, ...) VALUES (tenant_B_id, ...). What happens?",
+      opts: [
+        { t: "The row is inserted but hidden from tenant A on subsequent SELECTs", ok: false,
+          why: "WITH CHECK validates the new row against the policy. A row stamped with tenant B's id fails the check when the GUC claims tenant A." },
+        { t: "PostgreSQL silently rewrites tenant_id to match the GUC", ok: false,
+          why: "RLS does not mutate data. It accepts or rejects the write. The application must supply the correct tenant_id." },
+        { t: "The INSERT succeeds because USING and WITH CHECK are separate policies", ok: false,
+          why: "This milestone uses one policy with both USING and WITH CHECK. WITH CHECK blocks forged tenant claims on INSERT." },
+        { t: "The INSERT is rejected — WITH CHECK requires tenant_id to equal the GUC value", ok: true,
+          why: "test_cross_tenant_insert_is_rejected proves this: get_tenant_connection(tenant_a) cannot insert a row carrying tenant_b's id. psycopg raises an error." }
+      ]
+    },
+    {
+      q: "What is the difference between ENABLE ROW LEVEL SECURITY and FORCE ROW LEVEL SECURITY?",
+      opts: [
+        { t: "ENABLE turns policies on for non-owners; FORCE also applies policies to the table owner", ok: true,
+          why: "Without FORCE, the table owner (cmis) bypasses RLS. FORCE binds the owner too — migrations and seeding must explicitly SET row_security = off when needed." },
+        { t: "ENABLE applies to SELECT only; FORCE extends coverage to INSERT, UPDATE, and DELETE", ok: false,
+          why: "Both commands affect all verbs. Policy cmd (ALL vs per-verb) is separate. FORCE is about who is subject to policies, not which operations." },
+        { t: "FORCE is required to block superusers; ENABLE is sufficient for normal roles", ok: false,
+          why: "Superusers bypass RLS regardless of FORCE. FORCE only binds the table owner. The cmis_app role fix addresses superuser bypass separately." },
+        { t: "They are synonyms — FORCE is deprecated alias for ENABLE in PostgreSQL 16", ok: false,
+          why: "They are distinct catalog flags (relrowsecurity vs relforcerowsecurity). Both are set in migration 0002 and asserted in the invariant test." }
+      ]
+    },
+    {
+      q: "M3 introduces connection pooling. Why is today's set_config(..., is_local=false) a hazard?",
+      opts: [
+        { t: "false means the GUC persists for the entire session; a pooled connection returned to another tenant's request can still carry the previous tenant's GUC", ok: true,
+          why: "Session-scoped set_config survives across check-in/check-out. Tenant B's request on a connection that served tenant A can see A's rows. Fix: SET LOCAL (is_local=true) before M3/M4 pool — recorded as L4 follow-up #4." },
+        { t: "false disables the GUC after the first transaction, so later queries on the same connection are unscoped", ok: false,
+          why: "is_local=false means session-scoped (persists), not transaction-scoped. The hazard is persistence across requests, not premature clearing." },
+        { t: "false prevents the GUC from being read by current_setting in RLS policies", ok: false,
+          why: "The GUC is readable either way. The problem is cross-request leakage when connections are reused, not policy visibility." },
+        { t: "Pooling requires is_local=false; the hazard is unavoidable without per-tenant connection pools", ok: false,
+          why: "SET LOCAL (is_local=true) scopes the GUC to the current transaction and is the planned fix. Per-tenant pools would work but are unnecessary overhead." }
+      ]
+    }
+  ];
+
+  function shuffle(arr, seed) {
+    var a = arr.slice();
+    var s = seed;
+    for (var i = a.length - 1; i > 0; i--) {
+      s = (s * 9301 + 49297) % 233280;
+      var j = Math.floor((s / 233280) * (i + 1));
+      var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+    return a;
+  }
+
+  var root = document.getElementById("quiz-root");
+  QUESTIONS.forEach(function (q, qi) {
+    var box = document.createElement("div");
+    box.className = "quiz-q";
+    var h = document.createElement("h4");
+    h.textContent = "Q" + (qi + 1) + ". " + q.q;
+    box.appendChild(h);
+    var fb = document.createElement("div");
+    fb.className = "feedback";
+    shuffle(q.opts, 2468 + qi * 991).forEach(function (opt) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "opt";
+      b.textContent = opt.t;
+      b.addEventListener("click", function () {
+        box.querySelectorAll("button.opt").forEach(function (bb) { bb.disabled = true; });
+        var mark = document.createElement("span");
+        mark.className = "mark " + (opt.ok ? "c" : "w");
+        mark.textContent = opt.ok ? "\u2713" : "\u2717";
+        b.prepend(mark);
+        b.classList.add(opt.ok ? "correct" : "wrong");
+        if (!opt.ok) {
+          box.querySelectorAll("button.opt").forEach(function (bb) {
+            var match = q.opts.some(function (o) { return o.ok && bb.textContent.indexOf(o.t) !== -1; });
+            if (match) bb.classList.add("correct");
+          });
+        }
+        fb.innerHTML = opt.ok
+          ? "<b class='verdict-ok'>Correct.</b> " + opt.why
+          : "<b class='verdict-no'>Not quite.</b> " + opt.why;
+        fb.classList.add("show");
+      });
+      box.appendChild(b);
+    });
+    box.appendChild(fb);
+    root.appendChild(box);
+  });
+})();
+</script>
+</body>
+</html>
