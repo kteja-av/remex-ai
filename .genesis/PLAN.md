@@ -157,4 +157,7 @@ save, and what to fetch, backed by a thin key-value/file store and a large conte
 
 ## Progress (loops append here on milestone completion — newest last)
 
-- _(none yet — first loop fills this)_
+- **M1 — Compose skeleton + health check · DONE 2026-07-30.** L1 BUILD (2 iters) → G4 computed green
+  (demo 8/8 exit 0; ruff+mypy clean) → L4 VERIFY APPROVE (claude-opus-5-thinking-high, falsification
+  probes passed) → quiz-me Q+A logged. Live: 4-service compose stack, real `GET /v1/health`
+  (fail-open), heartbeat worker. 5 non-blocking follow-ups filed in `checkpoints/M1.md`.

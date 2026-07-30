@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M1 — Compose Skeleton + Health Check · remex-ai</title>
+<style>
+  :root {
+    --bg: #0f141b; --panel: #171e28; --panel2: #1d2634; --ink: #e6ecf3;
+    --muted: #9fb0c3; --accent: #5fb0ff; --ok: #43c98a; --bad: #ff6b6b;
+    --warn: #ffcf5c; --border: #2b3a4d; --code-bg: #0a0e14;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.65; font-size: 16px;
+  }
+  main { max-width: 880px; margin: 0 auto; padding: 32px 20px 96px; }
+  h1 { font-size: 1.9rem; line-height: 1.25; margin: 0 0 8px; }
+  h2 { font-size: 1.4rem; margin: 48px 0 16px; padding-top: 24px; border-top: 2px solid var(--border); }
+  h3 { font-size: 1.1rem; margin: 28px 0 10px; color: var(--accent); }
+  p { margin: 10px 0; }
+  a { color: var(--accent); }
+  code {
+    background: var(--panel2); padding: 2px 6px; border-radius: 5px;
+    font-family: "Cascadia Code", "JetBrains Mono", Consolas, monospace; font-size: 0.88em;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; overflow-x: auto; white-space: pre; font-size: 0.86rem; line-height: 1.5;
+  }
+  pre code { background: none; padding: 0; }
+  .subtitle { color: var(--muted); margin-bottom: 28px; }
+  .toc {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 22px; margin: 24px 0 8px;
+  }
+  .toc ol { margin: 8px 0 4px; padding-left: 22px; }
+  .toc li { margin: 6px 0; }
+  .callout {
+    border-left: 4px solid var(--accent); background: var(--panel);
+    border-radius: 0 10px 10px 0; padding: 12px 16px; margin: 16px 0;
+  }
+  .callout.def { border-color: var(--accent); }
+  .callout.inv { border-color: var(--ok); }
+  .callout.edge { border-color: var(--warn); }
+  .callout b.tag { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .callout.def b.tag { color: var(--accent); }
+  .callout.inv b.tag { color: var(--ok); }
+  .callout.edge b.tag { color: var(--warn); }
+  .flow { display: flex; flex-direction: column; gap: 0; margin: 18px 0; }
+  .node {
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 16px; text-align: center;
+  }
+  .node b { display: block; }
+  .node small { color: var(--muted); }
+  .arrow {
+    text-align: center; color: var(--muted); font-size: 0.85rem; padding: 4px 0;
+  }
+  .arrow::before { content: "\2193  "; color: var(--accent); font-size: 1rem; }
+  .lane {
+    display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: stretch; margin: 18px 0;
+  }
+  .lane .side { background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; }
+  .lane .via { align-self: center; text-align: center; color: var(--muted); font-size: 0.82rem; }
+  .lane .via b { color: var(--accent); display: block; font-size: 1.1rem; }
+  table.map { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.92rem; }
+  table.map th, table.map td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
+  table.map th { background: var(--panel2); }
+  .fileref { color: var(--warn); font-size: 0.85rem; }
+  .quiz-q {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px 20px; margin: 22px 0;
+  }
+  .quiz-q h4 { margin: 0 0 12px; font-size: 1.02rem; }
+  .quiz-q button.opt {
+    display: block; width: 100%; text-align: left; margin: 8px 0; padding: 11px 14px;
+    background: var(--panel2); color: var(--ink); border: 1px solid var(--border);
+    border-radius: 9px; cursor: pointer; font-size: 0.94rem; font-family: inherit; line-height: 1.5;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .quiz-q button.opt:hover:not(:disabled) { border-color: var(--accent); }
+  .quiz-q button.opt:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .quiz-q button.opt:disabled { cursor: default; opacity: 0.85; }
+  .quiz-q button.opt.correct { border-color: var(--ok); background: rgba(67, 201, 138, 0.12); }
+  .quiz-q button.opt.wrong { border-color: var(--bad); background: rgba(255, 107, 107, 0.1); }
+  .quiz-q .mark { font-weight: 700; margin-right: 6px; }
+  .quiz-q .mark.c { color: var(--ok); }
+  .quiz-q .mark.w { color: var(--bad); }
+  .feedback {
+    display: none; margin-top: 12px; padding: 12px 14px; border-radius: 9px;
+    background: var(--panel2); border: 1px solid var(--border); font-size: 0.93rem;
+  }
+  .feedback.show { display: block; }
+  .feedback b.verdict-ok { color: var(--ok); }
+  .feedback b.verdict-no { color: var(--bad); }
+  @media (max-width: 640px) {
+    .lane { grid-template-columns: 1fr; }
+    .lane .via { padding: 2px 0; }
+    pre { white-space: pre-wrap; word-break: break-word; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+<h1>M1 — Compose Skeleton + Health Check</h1>
+<p class="subtitle">remex-ai · milestone M1 · branch <code>M1</code> (all files new — this is the first code in the repo) · verified 2026-07-30</p>
+
+<p>This milestone takes the repository from <em>zero source files</em> to a running, four-service Docker Compose stack — Postgres with pgvector, Redis, a FastAPI service, and a separate background worker — with a <code>GET /v1/health</code> endpoint that honestly reports the state of every dependency. Nothing here is a stub: each field in the health payload is computed live against the real dependency, and failures degrade the payload instead of crashing the endpoint.</p>
+
+<nav class="toc">
+  <b>Contents</b>
+  <ol>
+    <li><a href="#background">Background — the system being bootstrapped</a></li>
+    <li><a href="#intuition">Intuition — the core ideas, with toy examples</a></li>
+    <li><a href="#code">Code walkthrough — execution order</a></li>
+    <li><a href="#quiz">Quiz — check your understanding</a></li>
+  </ol>
+</nav>
+
+<h2 id="background">1. Background</h2>
+
+<p><b>What remex-ai is.</b> This project is a <em>conversational memory system</em>: a service that decides which facts from a conversation are worth remembering, stores them in Postgres with vector embeddings (via the <code>pgvector</code> extension), and retrieves the relevant ones for later turns. The architecture (chosen in the plan's brainstorm as &ldquo;Approach B&rdquo;) puts an LLM &ldquo;judge&rdquo; that admits or rejects candidate memories in a <em>background worker</em>, so slow LLM calls never sit inside an HTTP request.</p>
+
+<p><b>Where M1 sits.</b> M1 is deliberately infrastructural. It does not implement memory at all. It proves four things that every later milestone depends on:</p>
+<ul>
+  <li>The whole system runs as <b>one self-hosted Docker Compose stack</b> (ADR-0004) — nothing installed on the host.</li>
+  <li>The database image is <b>pgvector-capable</b> (ADR-0001) and the <code>vector</code> extension actually exists in the database.</li>
+  <li>Redis is in the stack <b>from day one</b> (ADR-0003), because the future Write Gate will be queue-backed.</li>
+  <li>The <b>api and worker are separate processes</b> from the start, making the invariant below structurally true instead of retrofitted in M5.</li>
+</ul>
+
+<div class="callout inv">
+  <b class="tag">Invariant guarded by this milestone</b>
+  <b>background_jobs_never_block_the_request_path</b> — background work (eventually LLM judging, decay, reflection) runs in its own service, so a slow or stuck background job can never stall an HTTP response. M1 enforces this two ways: api and worker are separate Compose services, and an invariant test fails the build if any file under <code>app/api/</code> imports anything from <code>worker/</code>.
+</div>
+
+<div class="callout def">
+  <b class="tag">Definitions on first use</b>
+  <b>pgvector</b> — a Postgres extension that adds a <code>vector</code> column type and similarity indexes; how the system will store and search embeddings. <b>Docker Compose healthcheck</b> — a command Compose runs periodically inside a container; <code>depends_on: condition: service_healthy</code> makes one service wait for another's check to pass. <b>Heartbeat</b> — a timestamp a process rewrites on a fixed interval; other processes infer liveness from how old it is. <b>Fail-open</b> — returning a successful HTTP response with degraded content instead of an error when a dependency is down.
+</div>
+
+<p><b>Prior behavior.</b> There was none — G0 pre-flight confirmed the repo contained zero source files, no Dockerfile, no compose file. So the &ldquo;before&rdquo; picture is an empty directory; the &ldquo;after&rdquo; picture is this request path:</p>
+
+<div class="flow" aria-label="Request flow: client calls /v1/health, api probes postgres, redis, and the worker's heartbeat key in redis, then returns ok or degraded">
+  <div class="node"><b>Client / test / Compose healthcheck</b><small>GET http://api:8000/v1/health</small></div>
+  <div class="arrow">HTTP request</div>
+  <div class="node"><b>api service (FastAPI / uvicorn)</b><small>routes_health.py runs three independent probes</small></div>
+  <div class="arrow">SELECT 1 + SELECT FROM pg_extension</div>
+  <div class="node"><b>postgres (pgvector/pgvector:pg16)</b><small>reachable? · extension 'vector' present?</small></div>
+  <div class="arrow">PING → PONG, and GET cmis:worker:heartbeat</div>
+  <div class="node"><b>redis (redis:7-alpine)</b><small>pong? · heartbeat age &le; 15s?</small></div>
+  <div class="arrow">aggregate all three</div>
+  <div class="node"><b>HTTP 200</b><small>{"status": "ok" | "degraded", "dependencies": {...}}</small></div>
+</div>
+
+<p><b>Where does the heartbeat come from?</b> A fourth service, <code>worker</code>, runs an infinite loop that writes the current Unix timestamp into the Redis key <code>cmis:worker:heartbeat</code> every 5 seconds. The api never talks to the worker process directly — it only reads the timestamp the worker left in Redis. Redis is the only meeting point.</p>
+
+<div class="lane" aria-label="Producer and consumer of the heartbeat key">
+  <div class="side"><b>worker service</b> (producer)<br><code>worker/main.py</code> loop → <code>beat(client)</code> → <code>SET cmis:worker:heartbeat "1753887…"</code> every 5s</div>
+  <div class="via"><b>⟷</b>Redis key<br><code>cmis:worker:heartbeat</code><br>value = Unix timestamp</div>
+  <div class="side"><b>api service</b> (consumer)<br><code>routes_health.py:_check_worker()</code> → <code>GET cmis:worker:heartbeat</code> → age = now − timestamp → fresh if age ≤ 15s</div>
+</div>
+
+<h2 id="intuition">2. Intuition</h2>
+
+<h3>2.1 A smoke detector for the skeleton</h3>
+<p>The smallest useful mental model: M1 builds the building's frame and installs one smoke detector per system, then wires all the detectors to a single panel (<code>/v1/health</code>). The panel must keep working even when a detector reports trouble — a smoke detector that burns down with the building is useless. That is why the health endpoint <b>never returns 5xx for a dependency failure</b>: each probe catches its own exceptions and reports <code>false</code>, and the endpoint always answers HTTP 200 with <code>"status": "degraded"</code>.</p>
+
+<h3>2.2 Toy example — reading the payload</h3>
+<p>Imagine the worker container crashed 40 seconds ago. Postgres and Redis are fine.</p>
+<table class="map">
+  <tr><th>Probe</th><th>Live result</th><th>Effect on payload</th></tr>
+  <tr><td><code>_check_postgres()</code></td><td>SELECT 1 → row; pg_extension has 'vector'</td><td><code>{"reachable": true, "pgvector": true}</code></td></tr>
+  <tr><td><code>_check_redis()</code></td><td>PING → PONG</td><td><code>{"pong": true}</code></td></tr>
+  <tr><td><code>_check_worker()</code></td><td>heartbeat value is 40s old</td><td><code>{"heartbeat_age_seconds": 40.0, "fresh": false, "stale_after_seconds": 15}</code></td></tr>
+</table>
+<p>The aggregate: <code>ok = true &amp;&amp; true &amp;&amp; true &amp;&amp; false</code> → <code>false</code>, so the response is <code>HTTP 200 {"status": "degraded", …}</code>. An operator sees exactly <em>which</em> dependency is sick and <em>how</em> sick (40s old vs a 15s window), not just a red light.</p>
+
+<h3>2.3 Why a heartbeat instead of &ldquo;ping the worker&rdquo;</h3>
+<p>The api could try to open a TCP connection to the worker, but the worker has no server socket — it is a loop, not a service you can call. Indirect liveness through a shared store is the standard pattern here: the worker proves it is alive by <em>doing the thing it exists to do</em> (writing to Redis) and the api measures the evidence. This also mirrors the future exactly: in M5 the api will enqueue judge jobs into Redis and the worker will consume them — same channel, same decoupling.</p>
+
+<div class="callout edge">
+  <b class="tag">Edge case built into the design</b>
+  Stale threshold (15s) is deliberately 3&times; the heartbeat interval (5s). The worker can miss two consecutive beats (GC pause, scheduling hiccup, slow Redis) without the health panel declaring it dead. If you raised the interval to 20s without touching the 15s window, the api would <em>permanently</em> report <code>fresh: false</code> — every heartbeat arrives already stale — while <code>docker compose ps</code> still shows the worker healthy, because the Compose healthcheck uses its own hardcoded 30s window (a recorded M1 follow-up).
+</div>
+
+<h3>2.4 Why <code>CREATE EXTENSION</code> lives in app startup (for now)</h3>
+<p>The <code>pgvector/pgvector:pg16</code> image ships the extension <em>binaries</em> but does not run <code>CREATE EXTENSION vector</code> in your database — that is a per-database operation. M1 does it in the FastAPI <code>lifespan</code> hook (runs once when uvicorn starts): the simplest place that is guaranteed to execute before the app serves traffic, using the app's own connection string. It is explicitly marked &ldquo;M1 bootstrap only&rdquo; — from M2, Alembic migrations own schema. The <code>except psycopg.Error: pass</code> matters: if the database is unreachable at boot, the api still starts, and the health endpoint can then <em>report</em> postgres as down — a startup crash would hide the diagnosis.</p>
+
+<h2 id="code">3. Code walkthrough</h2>
+
+<p>Ordered by execution flow: image → orchestration → worker producer → api consumer → probes → tests.</p>
+
+<h3>3.1 One image, two commands <span class="fileref">— Dockerfile</span></h3>
+
+```1:14:Dockerfile
+FROM python:3.12-slim
+ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/app
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+CMD ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+<p>Both <code>api</code> and <code>worker</code> services use <code>build: .</code> — one image, different <code>command</code>. <code>PYTHONPATH=/app</code> is what lets <code>python -m worker.main</code> import <code>app.config</code> (the shared settings module). A recorded follow-up notes the two builds produce separately-tagged but identical images today; a shared <code>image:</code> tag should be added before M5.</p>
+
+<h3>3.2 Orchestration and the startup contract <span class="fileref">— docker-compose.yml</span></h3>
+
+```1:65:docker-compose.yml
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+  api:
+    build: .
+    command: ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      WORKER_HEARTBEAT_STALE_AFTER_SECONDS: ${WORKER_HEARTBEAT_STALE_AFTER_SECONDS:-15}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/health', timeout=3)"]
+  worker:
+    build: .
+    command: ["python", "-m", "worker.main"]
+    environment:
+      WORKER_HEARTBEAT_INTERVAL_SECONDS: ${WORKER_HEARTBEAT_INTERVAL_SECONDS:-5}
+    depends_on:
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "-c", "… assert time.time()-float(v.decode()) < 30, 'heartbeat stale'"]
+```
+
+<p>Three details carry the design:</p>
+<ul>
+  <li><b><code>depends_on: service_healthy</code></b> — the api does not start until Postgres accepts connections <em>and</em> Redis answers PING. This is what makes <code>docker compose up -d --wait</code> a meaningful demo gate: exit 0 means the whole stack is genuinely ready.</li>
+  <li><b>The worker's Compose healthcheck re-implements staleness</b> (read key, assert age &lt; 30s) rather than trusting process liveness — a hung loop inside a running container is still caught. Note the hardcoded <code>30</code> vs the app's contractual 15s; recorded as a follow-up to read the env var instead.</li>
+  <li><b>The api's Compose healthcheck calls the real endpoint</b>, so &ldquo;healthy&rdquo; at the orchestration layer means &ldquo;the app boots and serves,&rdquo; not merely &ldquo;port open.&rdquo;</li>
+</ul>
+
+<h3>3.3 The producer — worker heartbeat <span class="fileref">— worker/main.py, worker/heartbeat.py</span></h3>
+
+```9:17:worker/main.py
+def main() -> None:
+    client = make_client()
+    while True:
+        try:
+            beat(client)
+        except redis.RedisError:
+            time.sleep(1)
+            client = make_client()   # reconnect on failure
+        time.sleep(settings.worker_heartbeat_interval_seconds)
+```
+
+```10:15:worker/heartbeat.py
+def beat(client: redis.Redis) -> None:
+    client.set(HEARTBEAT_KEY, str(time.time()))
+
+def make_client() -> redis.Redis:
+    return redis.Redis.from_url(settings.redis_url, socket_timeout=5)
+```
+
+<p>The value stored is a plain Unix timestamp string. The reconnect path (<code>except redis.RedisError</code> → rebuild client) means a Redis restart pauses the heartbeat rather than killing the worker; when Redis returns, beats resume and <code>fresh</code> flips back to true on its own. The loop is intentionally a no-op placeholder — M5 replaces the body with a real queue consumer while keeping the process boundary and this test scaffold.</p>
+
+<h3>3.4 The consumer — three independent probes <span class="fileref">— app/api/routes_health.py</span></h3>
+
+```16:54:app/api/routes_health.py
+def _check_postgres() -> dict[str, Any]:
+    result = {"reachable": False, "pgvector": False}
+    try:
+        with get_connection() as conn:
+            row = conn.execute("SELECT 1").fetchone()
+            result["reachable"] = row is not None and row[0] == 1
+            ext = conn.execute(
+                "SELECT COUNT(*) FROM pg_extension WHERE extname = 'vector'"
+            ).fetchone()
+            result["pgvector"] = ext is not None and ext[0] > 0
+    except psycopg.Error:
+        pass
+    return result
+
+def _check_worker() -> dict[str, Any]:
+    ...
+    raw = cast(bytes | None, client.get(HEARTBEAT_KEY))
+    if raw is not None:
+        age = time.time() - float(raw.decode())
+        result["heartbeat_age_seconds"] = round(age, 3)
+        result["fresh"] = age <= settings.worker_heartbeat_stale_after_seconds
+```
+
+<p>Design properties worth noticing:</p>
+<ul>
+  <li><b>Defaults are pessimistic.</b> Each result dict starts <code>False</code>/<code>None</code> and is only upgraded by positive evidence. An exception mid-probe can never leave a stale <code>true</code> behind.</li>
+  <li><b>Every probe has a timeout.</b> Postgres connects with <code>connect_timeout=2</code> (<code>app/db/session.py</code>); Redis clients use <code>socket_timeout=2</code>. A hung dependency delays the health response by seconds, not forever.</li>
+  <li><b>pgvector is probed independently of reachability</b> — the L4 verifier confirmed that a database without the extension flips <em>only</em> <code>pgvector</code> to false, which is how the iter-1 bug (image present, extension never created) was caught in the first place.</li>
+  <li><b>The api duplicates the key name and threshold</b> (<code>HEARTBEAT_KEY</code> is defined in three places) rather than importing <code>worker.heartbeat</code> — deliberate: importing the worker's module would break the very invariant the separation test guards. The follow-up is to centralize the constant in <code>app/config.py</code>, which both sides already import.</li>
+</ul>
+
+<h3>3.5 Aggregation — the fail-open contract <span class="fileref">— app/api/routes_health.py</span></h3>
+
+```57:70:app/api/routes_health.py
+@router.get("/v1/health")
+def health() -> dict[str, Any]:
+    dependencies = {
+        "postgres": _check_postgres(),
+        "redis": _check_redis(),
+        "worker": _check_worker(),
+    }
+    ok = (
+        dependencies["postgres"]["reachable"]
+        and dependencies["postgres"]["pgvector"]
+        and dependencies["redis"]["pong"]
+        and dependencies["worker"]["fresh"]
+    )
+    return {"status": "ok" if ok else "degraded", "dependencies": dependencies}
+```
+
+<p>No exception escapes a probe, so this handler cannot 500 on a dependency failure — verified by the L4 checker, which made dependencies unreachable and observed HTTP 200 <code>degraded</code> every time. And the pgvector bootstrap that makes the happy path green:</p>
+
+```11:19:app/api/main.py
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    try:
+        with get_connection() as conn:
+            conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+            conn.commit()
+    except psycopg.Error:
+        pass
+    yield
+```
+
+<h3>3.6 The proof — acceptance and invariant tests</h3>
+
+<p><b>Acceptance</b> (<code>tests/acceptance/test_m1_health.py</code>, 6 tests) runs <em>inside</em> the stack (<code>docker compose run --rm api pytest</code>) and asserts every field of the payload against the live services. The most interesting one proves the heartbeat is a live signal, not a constant:</p>
+
+```43:48:tests/acceptance/test_m1_health.py
+def test_worker_heartbeat_key_advances() -> None:
+    client = redis.Redis.from_url(REDIS_URL, socket_timeout=2)
+    first = float(client.get(HEARTBEAT_KEY).decode())
+    time.sleep(6)                      # > one 5s beat interval
+    second = float(client.get(HEARTBEAT_KEY).decode())
+    assert second > first, "worker heartbeat is not advancing"
+```
+
+<p><b>Invariants</b> (<code>tests/invariants/test_api_worker_separation.py</code>, 2 tests) guard architecture rather than behavior. The first parses every <code>app/api/**.py</code> file with the <code>ast</code> module and fails on any import of <code>worker.*</code> — this is the machine-enforced form of <em>background_jobs_never_block_the_request_path</em>, and M5 will extend this same test rather than invent a new one. The second asserts the compose file wires <code>app.api.main:app</code> and <code>worker.main</code> as separate commands; it now matches command <em>tokens</em> after iter-1's bug where a string assertion missed the list-form command.</p>
+
+<h2 id="quiz">4. Quiz</h2>
+<p>Five questions. Pick an answer to see immediate feedback with the reasoning.</p>
+
+<div id="quiz-root"></div>
+
+</main>
+<script>
+(function () {
+  "use strict";
+  var QUESTIONS = [
+    {
+      q: "Postgres is stopped with docker compose stop postgres. What does GET /v1/health return?",
+      opts: [
+        { t: "HTTP 200 with \"status\": \"degraded\" and postgres.reachable: false", ok: true,
+          why: "Each probe catches psycopg.Error and keeps its pessimistic defaults; the handler aggregates the false fields into \"degraded\". The L4 verifier confirmed unreachable dependencies never produce 5xx." },
+        { t: "HTTP 503, because a missing dependency is by definition a server error", ok: false,
+          why: "The endpoint is intentionally fail-open: dependency failure is data, not an exception. The probes convert errors into false fields and the handler still returns 200." },
+        { t: "HTTP 200 with \"status\": \"ok\", because the api process itself is still up", ok: false,
+          why: "\"ok\" requires postgres.reachable, postgres.pgvector, redis.pong and worker.fresh all true. A stopped Postgres flips reachable to false, so the aggregate is \"degraded\"." },
+        { t: "The request hangs until Postgres comes back, since the probe blocks on connect", ok: false,
+          why: "get_connection uses connect_timeout=2 and the Redis probes use socket_timeout=2, so a dead dependency costs seconds at most, not an indefinite hang." }
+      ]
+    },
+    {
+      q: "Why does the api read a Redis key to learn whether the worker is alive, instead of calling the worker directly?",
+      opts: [
+        { t: "The worker has no server interface to call; a heartbeat in the shared store is the liveness signal, and it matches the future queue topology", ok: true,
+          why: "The worker is a loop, not a server. Redis is already the planned rendezvous for M5's job queue, so the heartbeat exercises the same channel and decoupling the Write Gate will use." },
+        { t: "Redis is faster than TCP, so health checks through Redis have lower latency", ok: false,
+          why: "Latency is not the reason — the api still makes a network call, just to Redis. The reason is that the worker exposes no endpoint and the indirection keeps api and worker decoupled." },
+        { t: "Docker networking prevents the api container from opening connections to the worker container", ok: false,
+          why: "Compose puts both services on the same network; the api could connect if the worker listened. The worker simply has no listener — it is a producer loop." },
+        { t: "The heartbeat key exists only to give the acceptance tests something to assert against", ok: false,
+          why: "Tests assert against it because it is the real liveness contract, not the other way around. The worker healthcheck in compose independently relies on the same key." }
+      ]
+    },
+    {
+      q: "Where does postgres.pgvector: true come from on a fresh stack, and what was the iter-1 bug?",
+      opts: [
+        { t: "The pgvector image auto-creates the extension in every database; iter-1's bug was an unrelated network misconfiguration", ok: false,
+          why: "The image ships only the binaries. Extension creation is per-database and must be run explicitly — that gap was exactly the iter-1 failure." },
+        { t: "routes_health.py runs CREATE EXTENSION inside the health probe, so the first health call creates it; iter-1's bug was a race between probes", ok: false,
+          why: "The probe only reads pg_extension. Creation happens once in the FastAPI lifespan hook at app startup, not per request." },
+        { t: "The lifespan hook in app/api/main.py runs CREATE EXTENSION IF NOT EXISTS vector at startup; iter-1 failed because the image ships binaries but never creates the extension in the cmis database", ok: true,
+          why: "iter-1 demo showed pgvector:false precisely because nobody had run CREATE EXTENSION. The lifespan fix creates it idempotently before serving traffic, and the probe verifies it independently." },
+        { t: "The postgres initdb scripts bundled in the repo create it; iter-1's bug was that the volume cached an old data directory", ok: false,
+          why: "There are no initdb scripts in the freeze boundary. Creation lives in app startup code, explicitly marked as M1 bootstrap until Alembic takes over schema in M2." }
+      ]
+    },
+    {
+      q: "Why is HEARTBEAT_KEY defined separately in both routes_health.py and worker/heartbeat.py instead of shared by import?",
+      opts: [
+        { t: "Python modules cannot be shared across two containers built from the same image", ok: false,
+          why: "Both containers mount the same /app tree and share PYTHONPATH — worker/main.py already imports app.config. Sharing was technically possible; it was declined on architectural grounds." },
+        { t: "Importing worker.heartbeat from app/api would violate the api→worker separation invariant that the ast-based test enforces, so duplication is accepted until the constant moves to app/config.py", ok: true,
+          why: "The invariant test fails any app/api import of worker.*. Duplication keeps the request path structurally independent; the recorded follow-up is to centralize the constant in app/config.py, which both sides already import legally." },
+        { t: "The two definitions are actually different keys on purpose, so a typo in one cannot break the other", ok: false,
+          why: "Both literals are exactly \"cmis:worker:heartbeat\" — they must match or the health check would never see a beat. It is pure duplication, acknowledged as debt." },
+        { t: "Constants in Python are per-process and cannot be imported once a module is loaded in another container", ok: false,
+          why: "Imports work fine across the shared codebase. The duplication is a deliberate trade-off to keep the import graph clean, not a language limitation." }
+      ]
+    },
+    {
+      q: "WORKER_HEARTBEAT_INTERVAL_SECONDS is raised to 20 while the api's stale window stays 15s. What happens?",
+      opts: [
+        { t: "The api reports worker.fresh: false permanently (every beat arrives older than 15s), while docker compose ps still shows the worker as healthy because its healthcheck uses a hardcoded 30s window", ok: true,
+          why: "A 20s-old beat exceeds the 15s stale window, so fresh is false at every read. The compose worker healthcheck asserts age < 30, which a 20s-old beat still satisfies — the two views disagree, which is follow-up #1." },
+        { t: "The api reports fresh: true because the worker is still writing; staleness only matters if beats stop entirely", ok: false,
+          why: "fresh is computed as age <= stale_after_seconds on every read. With a 20s interval, the key is always 0–20s old only instantaneously after a write; most reads see age > 15, and every read after the first 15s of each cycle is stale." },
+        { t: "Both the api and compose report the worker unhealthy within 20 seconds, since both read the same key", ok: false,
+          why: "They read the same key but compare against different thresholds: the app contract is 15s, the compose healthcheck hardcodes 30s. Only the api flips." },
+        { t: "The worker crashes on startup because its interval exceeds the stale window", ok: false,
+          why: "Nothing validates interval against the window; the worker happily beats every 20s. The misconfiguration surfaces as a health-report mismatch, not a crash." }
+      ]
+    }
+  ];
+
+  // Deterministic per-question shuffle (seeded), so option order varies
+  // across questions while staying stable across reloads.
+  function shuffle(arr, seed) {
+    var a = arr.slice();
+    var s = seed;
+    for (var i = a.length - 1; i > 0; i--) {
+      s = (s * 9301 + 49297) % 233280;
+      var j = Math.floor((s / 233280) * (i + 1));
+      var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+    return a;
+  }
+
+  var root = document.getElementById("quiz-root");
+  QUESTIONS.forEach(function (q, qi) {
+    var box = document.createElement("div");
+    box.className = "quiz-q";
+    var h = document.createElement("h4");
+    h.textContent = "Q" + (qi + 1) + ". " + q.q;
+    box.appendChild(h);
+    var fb = document.createElement("div");
+    fb.className = "feedback";
+    shuffle(q.opts, 1234 + qi * 777).forEach(function (opt) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "opt";
+      b.textContent = opt.t;
+      b.addEventListener("click", function () {
+        box.querySelectorAll("button.opt").forEach(function (bb) { bb.disabled = true; });
+        var mark = document.createElement("span");
+        mark.className = "mark " + (opt.ok ? "c" : "w");
+        mark.textContent = opt.ok ? "✓" : "✗";
+        b.prepend(mark);
+        b.classList.add(opt.ok ? "correct" : "wrong");
+        if (!opt.ok) {
+          box.querySelectorAll("button.opt").forEach(function (bb) {
+            var match = q.opts.some(function (o) { return o.ok && bb.textContent.indexOf(o.t) !== -1; });
+            if (match) bb.classList.add("correct");
+          });
+        }
+        fb.innerHTML = opt.ok
+          ? "<b class='verdict-ok'>Correct.</b> " + opt.why
+          : "<b class='verdict-no'>Not quite.</b> " + opt.why;
+        fb.classList.add("show");
+      });
+      box.appendChild(b);
+    });
+    box.appendChild(fb);
+    root.appendChild(box);
+  });
+})();
+</script>
+</body>
+</html>

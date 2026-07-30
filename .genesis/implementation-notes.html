@@ -33,16 +33,17 @@
   <p class="sub"><b>Rolling source of truth for what is LIVE right now.</b> The wiki can lag; this file
      cannot. Read this on every session start to avoid rebuilding what exists. This is your
      <i>git-like restart point</i>: if context is lost, this file rehydrates you.
-     Last updated: <code>2026-07-30</code> · by loop: <code>genesis (G0–G6)</code></p>
+     Last updated: <code>2026-07-30</code> · by loop: <code>L1 BUILD M1 (done) → next L1 BUILD M2</code></p>
 
   <!-- ───────────── ONE-LINE STATUS ───────────── -->
   <div class="card live">
-    <b>Now in flight:</b> nothing yet — genesis ritual complete, no code written. M1 passed G0 Existence
-    Pre-Flight with verdict <b>UNBUILT</b>; L1 BUILD has not started.<br>
-    <b>Active loop:</b> NONE (next: L1 BUILD) · <b>Current milestone:</b> M1 — Compose skeleton + health
-    check · <b>Phase:</b> 13 Infrastructure &amp; Deployment (+3 Backend)<br>
-    <b>Blocked on:</b> nothing. Branch <code>M1</code> is checked out; <code>.genesis/</code> is untracked
-    (no commit made yet).
+    <b>M1 DONE:</b> Compose skeleton + health check shipped — postgres+pgvector, redis, api, and a
+    separate no-op heartbeat worker; <code>GET /v1/health</code> reports real per-dependency status
+    (fail-open: 200 <code>degraded</code>, never 5xx). L4 VERIFY APPROVE + quiz-me Q+A logged.<br>
+    <b>Active loop:</b> NONE (next: L1 BUILD on M2) · <b>Current milestone:</b> M2 — Typed memory schema +
+    migrations + RLS · <b>Phase:</b> 14 Data Engineering (+11 Security)<br>
+    <b>Blocked on:</b> nothing. M1 work on branch <code>M1</code> pending commit/merge/push
+    (awaiting user approval for git operations).
   </div>
 
   <!-- ───────────── WHAT'S LIVE ───────────── -->
@@ -51,7 +52,12 @@
     <table>
       <thead><tr><th>Capability</th><th>Where (file/route/symbol)</th><th>Status</th><th>Verified by</th></tr></thead>
       <tbody>
-        <tr><td colspan="4" style="color:var(--mut);font-style:italic">nothing live yet — 0 source files in the repo (verified by G0 pre-flight grep, 2026-07-30). Append a row the moment a milestone passes L4 VERIFY.</td></tr>
+        <tr>
+          <td>M1 — Compose skeleton + health check (postgres+pgvector, redis, api, heartbeat worker)</td>
+          <td><code>docker-compose.yml</code> · <code>Dockerfile</code> · <code>app/api/routes_health.py</code> (<code>GET /v1/health</code>) · <code>app/api/main.py</code> (lifespan <code>CREATE EXTENSION vector</code>) · <code>app/config.py</code> · <code>app/db/session.py</code> · <code>worker/main.py</code> + <code>worker/heartbeat.py</code> (Redis key <code>cmis:worker:heartbeat</code>, 5s interval / 15s stale)</td>
+          <td><span class="pill live">LIVE</span></td>
+          <td>demo command exit 0 (8/8) · ruff+mypy clean · L4 VERIFY APPROVE (claude-opus-5-thinking-high, falsification probes passed) · Q+A in <code>checkpoints/M1.md</code></td>
+        </tr>
       </tbody>
     </table>
     <p class="note">Append a row the moment a milestone passes L4 VERIFY. The grep in G0 checks against this table.</p>
@@ -89,9 +95,9 @@
   <h2>Known gaps &amp; the ordered Next list</h2>
   <div class="card">
     <ol>
-      <li>M1 L1 BUILD — write <code>docker-compose.yml</code> (postgres+pgvector, redis, api), <code>Dockerfile</code>, <code>requirements.txt</code>, <code>app/config.py</code>, <code>app/api/main.py</code>, <code>app/api/routes_health.py</code>, <code>app/db/session.py</code>, and <code>tests/acceptance/test_m1_health.py</code>.</li>
-      <li>M1 exit — run the demo command, then L4 VERIFY in a separate session on <code>claude-opus-5-thinking-high</code>.</li>
-      <li>Not yet built and deliberately deferred: the <code>tests/invariants/</code> suite referenced by <code>context-graph.json</code> lands with the milestone that first makes each invariant meaningful (RLS → M2, fail-open → M4, PII/provenance + api/worker separation → M5).</li>
+      <li>M2 G0 pre-flight, then L1 BUILD — Alembic migrations, <code>app/db/models.py</code>, <code>app/domain/memory.py</code>, RLS on every memory-bearing table, <code>tests/acceptance/test_m2_rls.py</code> + <code>tests/invariants/test_rls_enforced.py</code>. Alembic takes over <code>CREATE EXTENSION vector</code> from the M1 lifespan (L4 follow-up 5).</li>
+      <li>Non-blocking L4 follow-ups from M1 (fix in M2/M5, see <code>checkpoints/M1.md</code>): worker healthcheck 30s vs 15s drift; shared <code>image:</code> tag for api/worker; centralize <code>HEARTBEAT_KEY</code> in <code>app/config.py</code>; invariant test should parse compose YAML and catch transitive imports.</li>
+      <li>Remaining deferred invariant tests land with their milestone (fail-open → M4, PII/provenance → M5).</li>
     </ol>
     <p class="note">Mirror of <code>checkpoints/CURRENT.md → next_action</code>, but human-readable and durable across compaction.</p>
   </div>
@@ -109,6 +115,15 @@
        each with an exact demo command, and ADRs 0001–0006 split out of the design doc into
        <code>decisions/</code>. Created branch <code>M1</code> and ran M1's G0 Existence Pre-Flight: 0 source
        files, all proposed symbols absent → verdict UNBUILT. Nothing committed yet. Next: M1 L1 BUILD.</p>
+    <p><code>2026-07-30</code> — <b>M1 DONE.</b> L1 BUILD iter 1 wrote the full skeleton (13 files);
+       G4 failed twice and was fixed via L2 DEBUG: (1) pgvector image ships binaries only — lifespan now
+       runs <code>CREATE EXTENSION IF NOT EXISTS vector</code>; (2) invariant test matched a literal
+       string the list-form compose command never contains; plus 2 mypy errors. All gates recomputed
+       green: demo 8/8 exit 0, ruff+mypy clean. L4 VERIFY on claude-opus-5-thinking-high APPROVED after
+       independently re-running gates and falsifying the health checks (unreachable deps → 200 degraded;
+       missing extension flips pgvector:false; stale window 0 flips worker fresh:false). 5 non-blocking
+       follow-ups filed. Quiz-me Q+A answered (user-delegated) and logged. Next: commit/merge/push on
+       user approval, then M2 G0.</p>
     <p class="note">One paragraph per session: what shipped, what broke, what's next. This is the narrative the next cold session reads first.</p>
   </div>
 
