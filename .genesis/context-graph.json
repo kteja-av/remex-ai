@@ -1,0 +1,105 @@
+{
+  "$comment": "nodes=modules, edges=[cause,effect] where cause is imported-by effect. Nodes are SEEDED from the chosen architecture (CMIS system design v1 §6) because the repo has no code yet; re-run tools/graphizer.mjs --write once modules exist and keep the invariants block below.",
+  "project": ".",
+  "generated": "2026-07-30T12:58:39.846Z",
+  "seeded_from": "../cmis-memory/remex_ai_system_design_v1.md (§6 Architecture, §5 Invariants)",
+  "nodes": [
+    "app/config",
+    "app/db/session",
+    "app/db/models",
+    "app/domain/memory",
+    "app/domain/policy",
+    "app/embedding/local_encoder",
+    "app/retrieval/vector",
+    "app/retrieval/keyword",
+    "app/retrieval/graph_links",
+    "app/retrieval/hybrid",
+    "app/ranking/scorer",
+    "app/context/budgeter",
+    "app/audit/log",
+    "app/api/routes_memories",
+    "app/api/routes_retrieve",
+    "app/api/routes_audit",
+    "app/api/deps_auth",
+    "app/api/main",
+    "worker/queue",
+    "worker/pii_filter",
+    "worker/llm_providers",
+    "worker/write_gate",
+    "worker/conflict_resolver",
+    "worker/decay_job",
+    "worker/reflection_agent",
+    "worker/main"
+  ],
+  "edges": [
+    ["app/config", "app/db/session"],
+    ["app/db/models", "app/db/session"],
+    ["app/domain/memory", "app/db/models"],
+    ["app/domain/policy", "app/domain/memory"],
+    ["app/db/session", "app/retrieval/vector"],
+    ["app/db/session", "app/retrieval/keyword"],
+    ["app/db/session", "app/retrieval/graph_links"],
+    ["app/embedding/local_encoder", "app/retrieval/vector"],
+    ["app/retrieval/vector", "app/retrieval/hybrid"],
+    ["app/retrieval/keyword", "app/retrieval/hybrid"],
+    ["app/retrieval/graph_links", "app/retrieval/hybrid"],
+    ["app/retrieval/hybrid", "app/ranking/scorer"],
+    ["app/ranking/scorer", "app/context/budgeter"],
+    ["app/context/budgeter", "app/api/routes_retrieve"],
+    ["app/domain/memory", "app/api/routes_memories"],
+    ["app/audit/log", "app/api/routes_audit"],
+    ["app/audit/log", "app/api/routes_memories"],
+    ["app/api/deps_auth", "app/api/routes_memories"],
+    ["app/api/deps_auth", "app/api/routes_retrieve"],
+    ["app/api/deps_auth", "app/api/routes_audit"],
+    ["app/api/routes_memories", "app/api/main"],
+    ["app/api/routes_retrieve", "app/api/main"],
+    ["app/api/routes_audit", "app/api/main"],
+    ["worker/queue", "app/api/routes_memories"],
+    ["app/domain/policy", "worker/write_gate"],
+    ["worker/pii_filter", "worker/write_gate"],
+    ["worker/llm_providers", "worker/write_gate"],
+    ["worker/conflict_resolver", "worker/write_gate"],
+    ["app/domain/memory", "worker/write_gate"],
+    ["app/audit/log", "worker/write_gate"],
+    ["worker/write_gate", "worker/main"],
+    ["worker/decay_job", "worker/main"],
+    ["worker/reflection_agent", "worker/main"],
+    ["worker/queue", "worker/main"]
+  ],
+  "invariants": {
+    "read_path_fails_open": {
+      "rule": "GET /v1/memories:retrieve never returns 5xx. On any internal failure it returns HTTP 200 with {\"memories\": [], \"degraded\": true}.",
+      "why": "System design invariant #1 — memory retrieval is optional; the primary response path must work with zero memories returned.",
+      "check": "pytest -q tests/invariants/test_read_path_fails_open.py"
+    },
+    "read_path_makes_no_external_calls": {
+      "rule": "Nothing reachable from app/api/routes_retrieve may import worker/llm_providers or call an external network endpoint. Embeddings, keyword and graph signals are local only.",
+      "why": "Keeps the <150ms p95 read budget and removes external-provider risk from the user-facing path (ADR 0003, §13).",
+      "check": "pytest -q tests/invariants/test_read_path_local_only.py"
+    },
+    "no_durable_write_without_provenance_and_pii_verdict": {
+      "rule": "Every row in the memories table has non-null source_turn_ids, actor, created_at and a pii_verdict_id; no candidate text is sent to worker/llm_providers before worker/pii_filter has returned a verdict.",
+      "why": "System design invariants #2 and #3 plus threat model §4 — PII filter is pre-send, not just pre-store, and no fact is anonymous.",
+      "check": "pytest -q tests/invariants/test_provenance_and_pii_precedence.py"
+    },
+    "tenant_isolation_is_db_enforced": {
+      "rule": "Every table holding memory content or audit rows has RLS enabled with a tenant_id policy; a query that omits the tenant filter still returns zero cross-tenant rows.",
+      "why": "ADR 0006 — cross-tenant leakage is the highest-severity trust failure and application-layer scoping has no backstop.",
+      "check": "pytest -q tests/invariants/test_rls_enforced.py"
+    },
+    "background_jobs_never_block_the_request_path": {
+      "rule": "app/api/** must not import worker/write_gate, worker/decay_job or worker/reflection_agent; admission is reachable only via worker/queue, and every outbound call in worker/** has an explicit timeout.",
+      "why": "System design invariant #6 + ADR 0003 — the Write Gate is async and queue-backed; latency and rate limits stay off the user-facing path.",
+      "check": "pytest -q tests/invariants/test_api_worker_separation.py"
+    }
+  },
+  "freeze_boundary": [
+    "app/**",
+    "worker/**",
+    "migrations/**",
+    "tests/**",
+    "evals/**",
+    "ops/**"
+  ]
+}

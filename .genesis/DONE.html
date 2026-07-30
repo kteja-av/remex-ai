@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DONE — remex-ai</title>
+<style>
+  :root { --bg:#0d1117; --card:#161b22; --line:#30363d; --ink:#e6edf3; --mut:#8b949e;
+          --ok:#2ea043; --warn:#d29922; --bad:#f85149; --accent:#58a6ff; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:15px/1.55 ui-sans-serif,-apple-system,Segoe UI,Roboto,sans-serif; }
+  .wrap { max-width:920px; margin:0 auto; padding:32px 24px 80px; }
+  h1 { font-size:26px; margin:0 0 4px; }
+  h2 { font-size:18px; margin:32px 0 12px; border-bottom:1px solid var(--line); padding-bottom:6px; }
+  .sub { color:var(--mut); margin:0 0 24px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin:12px 0; }
+  .locked { border-left:3px solid var(--warn); }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th,td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--mut); font-weight:600; }
+  code { background:#1f2630; padding:1px 6px; border-radius:5px; font-size:13px; }
+  .gate { display:flex; gap:10px; align-items:flex-start; padding:6px 0; }
+  .box { width:16px; height:16px; border:1.5px solid var(--mut); border-radius:4px; flex:0 0 auto; margin-top:2px; }
+  .done .box { background:var(--ok); border-color:var(--ok); }
+  .done .label { color:var(--mut); text-decoration:line-through; }
+  .pill { display:inline-block; font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--mut); }
+  .pill.ok{color:var(--ok);border-color:var(--ok);} .pill.wip{color:var(--warn);border-color:var(--warn);}
+  .note { color:var(--mut); font-size:13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>DONE — remex-ai</h1>
+  <p class="sub">The single source of truth for <b>what "done" means</b> and <b>the implementation plan</b>.
+     This file is LOCKED — the driver model may not edit it without explicit user request.
+     Updated: 2026-07-30</p>
+
+  <!-- ───────────── THE LOCKED SPEC ───────────── -->
+  <h2>1 · The Locked Spec (what we are building)</h2>
+  <div class="card locked">
+    <p><b>Project:</b> CMIS — Conversational Memory Intelligence System. Design source of truth:
+       <code>../cmis-memory/remex_ai_system_design_v1.md</code> (system design v1 + sprint plan + threat
+       model + API contracts + ADRs 0001–0006).</p>
+
+    <p><b>Cognitive job:</b> Decide which parts of a conversation are worth remembering, store them durably
+       with provenance, and return the smallest ranked set of memories that makes the next turn better —
+       without ever becoming the bottleneck it exists to solve. This is explicitly <i>not</i> a
+       bigger-context-window strategy: selective admission, typed storage, ranked retrieval and active
+       decay replace "just put everything in the window."</p>
+
+    <p><b>Inputs:</b> conversation turns (user + assistant text) with metadata (tenant_id, user_id,
+       turn_id, timestamp, source surface); an optional explicit "remember this" signal; on the read side a
+       retrieval query + token budget
+       &nbsp;→&nbsp;
+       <b>Outputs:</b> (write) an admit / reject / update-existing decision plus a stored typed memory
+       record carrying source turn, importance and the judge's decision trace; (read) a ranked,
+       token-budgeted memory block with per-item provenance and a <code>degraded</code> flag.</p>
+
+    <p><b>Autonomy level:</b> supervised autonomy — the Write Gate decides admission, and decay/reflection
+       run unattended, but only inside the memory store, only within policy, and every decision is
+       reversible and auditable. The system never takes an action outside its own store.
+       &nbsp;|&nbsp;
+       <b>Human-in-the-loop points:</b> user/operator correction (<code>PATCH</code>) and deletion
+       (<code>DELETE</code>) as first-class endpoints; the audit endpoint answering "why do you know
+       this?"; procedural-memory admissions flagged for a secondary check (higher blast radius); decay-curve
+       and ranking weights are tuned against eval reports and reviewed by a human, never auto-shipped.</p>
+
+    <p><b>Failure tolerance:</b> the read path fails <i>open</i> — retrieval degrades to an empty memory
+       set and the conversation continues unpersonalized; it must never return 5xx or block a response.
+       The write path fails <i>closed</i> — no partial writes, and a failed PII check rejects the whole
+       candidate. Provider outage or rate-limit exhaustion parks candidates in a bounded queue
+       (<code>429</code> backpressure) rather than dropping them. All degradation must be observable.
+       &nbsp;|&nbsp;
+       <b>Trust boundary:</b> host app → API is the auth boundary (authenticated tenant_id + user_id on
+       every call); tenant↔tenant isolation is enforced by Postgres row-level security, not application
+       code; the riskiest boundary is worker → external free-tier LLM provider (NVIDIA NIM / Gemini), the
+       one point where conversation content leaves the self-hosted perimeter — so the PII filter runs
+       pre-send, not just pre-store. The memory store is itself an injection-persistence surface
+       (procedural-memory poisoning), so admission must distinguish "the user stated a preference" from
+       "the turn contains an imperative sentence."</p>
+
+    <p><b>G0 diagnostic (5 questions, <code>agentic-swe-master</code>):</b>
+       <b>Q1 Scope</b> — new build (greenfield repo). &nbsp;
+       <b>Q2 AI components</b> — yes: LLM-judge Write Gate, local embeddings, reflection agent. &nbsp;
+       <b>Q3 Distributed</b> — yes: API + worker + Postgres + Redis across process/network boundaries with
+       an async queue. &nbsp;
+       <b>Q4 Trust boundary</b> — yes: multi-tenant data, PII, external untrusted LLM providers. &nbsp;
+       <b>Q5 Current phase</b> — Phase 0 (Cognitive Design), entering Phase 13/3 for M1 and Phase 14/11 for M2.
+       <br><b>Route:</b> New + AI + Distributed + Trust → start at Phase 0 and walk all 20 phases in order.</p>
+
+    <p class="note">Filled during Genesis step G0 (Cognitive Design) via <code>agentic-swe-master</code>.
+       Chosen approach (G0.5) and the three rejected alternatives are recorded in <code>PLAN.md</code>.</p>
+  </div>
+
+  <!-- ───────────── DEFINITION OF DONE ───────────── -->
+  <h2>2 · Definition of Done (binary gates — checked by the VERIFIER, not the maker)</h2>
+  <div class="card">
+    <p class="note" style="margin-top:0">Copied verbatim from the <code>agentic-swe-master</code> phase
+       "Gate:" lines for every phase this project passes through. A milestone is DONE only when the gates
+       for its phase — plus the always-on gates at the bottom — are checked by the <b>verifier</b>.</p>
+
+    <div class="gate"><span class="box"></span><span class="label"><b>Phase 0 · Cognitive Design</b> — Cognitive job is written down. Autonomy level is explicit. Failure modes listed.</span></div>
+    <div class="gate"><span class="box"></span><span class="label"><b>Phase 1 · System Architecture</b> — Architecture style chosen with justification. Service graph exists. Boundary types stated (source / deployment / process / service). No cycles in dependency graph.</span></div>
+    <div class="gate"><span class="box"></span><span class="label"><b>Phase 3 · Backend &amp; API Layer</b> — Service modules defined. At least one state machine drawn with explicit states. Every outbound call has a timeout strategy. <span class="note">(CMIS: the memory lifecycle capture→admit/reject/update→store→decay→reflect→archive/delete is that state machine)</span></span></div>
+    <div class="gate"><span class="box"></span><span class="label"><b>Phase 4 · Workflow Orchestration</b> — Orchestration topology matches task structure. Workflow states are explicit. Checkpointing strategy defined. Span-of-control ≤ 7 workers per orchestrator.</span></div>
+    <div class="gate"><span class="box"></span><span class="label"><b>Phase 5 · LLM &amp; Reasoning Layer</b> — Model routing table defined. All outputs validated against schema. Context budget explicitly managed. Prompt versioning strategy in place. <span class="note">(CMIS: NIM / Gemini free tier → local fallback, and the judge's verdict is schema-validated)</span></span></div>
+    <div class="gate"><span class="box"></span><span class="label"><b>Phase 6 · Memory Architecture</b> — Memory tiers separated explicitly. RAG pipeline uses hybrid retrieval. Every response cites its source. Freshness strategy defined.</span></div>
+    <div class="gate"><span class="box"></span><span class="label"><b>Phase 9 · Evaluation Systems</b> — Golden dataset exists. 3-level eval plan written (component / integration / production). LLM-as-judge calibrated. Regression suite runs on every deploy.</span></div>
+    <div class="gate"><span class="box"></span><span class="label"><b>Phase 10 · Observability &amp; Tracing</b> — Every agent span captures latency + token count + tool result + cost. Alerts on p99 latency, error rate, and cost drift. Prompt traces searchable.</span></div>
+    <div class="gate"><span class="box"></span><span class="label"><b>Phase 11 · Security Architecture</b> — Threat model exists with specific adversary categories. Prompt injection mitigated with instruction hierarchy and sanitization. RBAC implemented. Audit trails are append-only and tamper-evident.</span></div>
+    <div class="gate"><span class="box"></span><span class="label"><b>Phase 12 · Reliability Engineering</b> — Every outbound call has circuit breaker + timeout + retry with idempotency. Checkpointing strategy allows resumption after crash. No operation has side effects on retry that it didn't have on first execution.</span></div>
+    <div class="gate"><span class="box"></span><span class="label"><b>Phase 13 · Infrastructure &amp; Deployment</b> — All services containerized. Queue strategy chosen. Model serving decision made. Semantic caching reduces token spend on repeat queries.</span></div>
+    <div class="gate"><span class="box"></span><span class="label"><b>Phase 14 · Data Engineering</b> — Pipelines are idempotent and rerunnable. Schema changes are backward-compatible for at least one full deployment cycle. Knowledge graph exists if reasoning requires entity relationships.</span></div>
+    <div class="gate"><span class="box"></span><span class="label"><b>Phase 15 · Governance &amp; Compliance</b> — Audit trail covers every agent action. Compliance requirements mapped to specific controls. Explainability mechanism exists for user-facing decisions.</span></div>
+    <div class="gate"><span class="box"></span><span class="label"><b>Phase 19 · Human-in-the-Loop</b> — Every high-stakes action has an approval gate. Confidence threshold for escalation is defined and tested. Feedback mechanism routes corrections to eval system.</span></div>
+    <div class="gate"><span class="box"></span><span class="label"><b>Phase 20 · Continuous Learning</b> — Reflection and learning are separate pipelines. Convergence threshold is explicit. No learning update ships without regression suite passing.</span></div>
+
+    <h3 style="font-size:15px;margin:18px 0 6px">Project-specific success criteria (CMIS)</h3>
+    <div class="gate"><span class="box"></span><span class="label">Read path fails <b>open</b>: <code>GET /v1/memories:retrieve</code> returns <code>200 {"memories":[],"degraded":true}</code> on internal failure — never 5xx, never blocking.</span></div>
+    <div class="gate"><span class="box"></span><span class="label">Write path fails <b>closed</b>: no partial writes; a failed PII check rejects the whole candidate.</span></div>
+    <div class="gate"><span class="box"></span><span class="label">PII filter runs <b>pre-send</b> — no candidate text reaches an external provider before a verdict exists.</span></div>
+    <div class="gate"><span class="box"></span><span class="label">Tenant isolation is DB-enforced (RLS on every memory-bearing table), proven by a cross-tenant read test.</span></div>
+    <div class="gate"><span class="box"></span><span class="label">Every stored fact is attributable (source turn + actor + timestamp) and every judge decision is replayable from its trace.</span></div>
+    <div class="gate"><span class="box"></span><span class="label">A user/operator can see, correct, and delete any stored memory; the deletion event survives the deleted content.</span></div>
+    <div class="gate"><span class="box"></span><span class="label">Retrieval quality is measured, not asserted: each retrieval milestone beats the recorded <code>evals/reports/baseline.json</code>.</span></div>
+    <div class="gate"><span class="box"></span><span class="label">Latency budget holds: read path &lt; 150ms p95 (local only); admission &lt; 30s p95 async, off the user-facing path.</span></div>
+
+    <h3 style="font-size:15px;margin:18px 0 6px">Always-on gates (every milestone, no exceptions)</h3>
+    <div class="gate"><span class="box"></span><span class="label">Dependency direction inward, zero cycles <span class="note">(modular-architecture gate)</span></span></div>
+    <div class="gate"><span class="box"></span><span class="label">Every outbound call has a timeout / circuit-breaker <span class="note">(production-readiness gate)</span></span></div>
+    <div class="gate"><span class="box"></span><span class="label">All LLM/structured outputs validated against a schema <span class="note">(llmops gate)</span></span></div>
+    <div class="gate"><span class="box"></span><span class="label">Threat model written; prompt-injection / untrusted-input considered <span class="note">(security gate — see design doc "Threat Model" section, including procedural-memory poisoning)</span></span></div>
+    <div class="gate"><span class="box"></span><span class="label"><code>docker compose run --rm api sh -c "ruff check . &amp;&amp; mypy app worker"</code> clean AND <code>docker compose run --rm api pytest -q</code> green in CI</span></div>
+    <div class="gate"><span class="box"></span><span class="label">The milestone's own <b>demo command</b> from <code>PLAN.md</code> exits 0 <span class="note">(computed, pasted — never narrated)</span></span></div>
+    <div class="gate"><span class="box"></span><span class="label">One <code>verify</code> pass by a <b>separate</b> agent/model (L4) — the maker never grades itself</span></div>
+    <div class="gate"><span class="box"></span><span class="label">No <code>context-graph.json</code> invariant violated by the change <span class="note">(<code>pytest -q tests/invariants</code>)</span></span></div>
+  </div>
+
+  <!-- ───────────── IMPLEMENTATION PLAN ───────────── -->
+  <h2>3 · Implementation Plan (the work, sliced into milestones)</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>#</th><th>Milestone</th><th>Phase</th><th>Demo command (proves it works)</th><th>Loops</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>M1</td><td>Compose skeleton (api + worker + postgres/pgvector + redis) + health check</td><td>13 Infra (+3 Backend)</td><td><code>docker compose up -d --wait &amp;&amp; docker compose run --rm api pytest -q tests/acceptance/test_m1_health.py tests/invariants/test_api_worker_separation.py</code></td><td>L1, L4</td><td><span class="pill">todo</span></td></tr>
+        <tr><td>M2</td><td>Typed memory schema + migrations + RLS</td><td>14 Data (+11 Security)</td><td><code>docker compose run --rm api sh -c "alembic upgrade head &amp;&amp; pytest -q tests/acceptance/test_m2_rls.py tests/invariants/test_rls_enforced.py"</code></td><td>L1, L4</td><td><span class="pill">todo</span></td></tr>
+        <tr><td>M3</td><td>Naive write + vector retrieval baseline</td><td>6 Memory</td><td><code>docker compose run --rm api sh -c "pytest -q tests/acceptance/test_m3_baseline.py &amp;&amp; python -m evals.run --suite baseline --out evals/reports/baseline.json &amp;&amp; python -m evals.show evals/reports/baseline.json"</code></td><td>L1, L3, L4</td><td><span class="pill">todo</span></td></tr>
+        <tr><td>M4</td><td>Read path fails open + token budgeting + citations</td><td>12 Reliability (+6)</td><td><code>docker compose run --rm api pytest -q tests/acceptance/test_m4_fail_open.py tests/invariants/test_read_path_fails_open.py tests/invariants/test_read_path_local_only.py</code></td><td>L1, L4</td><td><span class="pill">todo</span></td></tr>
+        <tr><td>M5</td><td>Async Write Gate (queue-backed) + pre-send PII filter</td><td>4 Orchestration + 5 LLM</td><td><code>docker compose run --rm api sh -c "pytest -q tests/acceptance/test_m5_write_gate.py tests/invariants/test_provenance_and_pii_precedence.py tests/invariants/test_api_worker_separation.py &amp;&amp; python -m evals.run --suite write_gate --out evals/reports/write_gate.json --compare evals/reports/baseline.json"</code></td><td>L1, L2, L3, L4</td><td><span class="pill">todo</span></td></tr>
+        <tr><td>M6</td><td>Append-only audit log + "why do you know this?"</td><td>15 Governance</td><td><code>docker compose run --rm api pytest -q tests/acceptance/test_m6_audit.py</code></td><td>L1, L4</td><td><span class="pill">todo</span></td></tr>
+        <tr><td>M7</td><td>Hybrid retrieval + ranking service</td><td>6 Memory</td><td><code>docker compose run --rm api sh -c "pytest -q tests/acceptance/test_m7_hybrid.py &amp;&amp; python -m evals.run --suite hybrid --out evals/reports/hybrid.json --compare evals/reports/baseline.json"</code></td><td>L1, L3, L4</td><td><span class="pill">todo</span></td></tr>
+        <tr><td>M8</td><td>Decay + reflection background jobs</td><td>20 Learning (+14)</td><td><code>docker compose run --rm api pytest -q tests/acceptance/test_m8_decay.py</code></td><td>L1, L4</td><td><span class="pill">todo</span></td></tr>
+        <tr><td>M9</td><td>Human override, deletion, conflict resolution</td><td>19 HITL</td><td><code>docker compose run --rm api pytest -q tests/acceptance/test_m9_override.py</code></td><td>L1, L4</td><td><span class="pill">todo</span></td></tr>
+        <tr><td>M10</td><td>Observability + adversarial eval + recovery runbook</td><td>10 Observability (+9, +12)</td><td><code>docker compose run --rm api sh -c "pytest -q tests/acceptance/test_m10_observability.py &amp;&amp; python -m evals.run --suite adversarial --out evals/reports/adversarial.json" &amp;&amp; bash ops/restore_drill.sh</code></td><td>L1, L2, L3, L4</td><td><span class="pill">todo</span></td></tr>
+      </tbody>
+    </table>
+    <p class="note">Total token budget = (n milestones × 50000). Update <span class="pill wip">wip</span> /
+       <span class="pill ok">done</span> as loops complete. This table is mirrored in <code>PLAN.md</code> for the agent to parse.</p>
+  </div>
+
+  <!-- ───────────── SKILL LOADING ───────────── -->
+  <h2>4 · Skill Loading Per Milestone</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>Milestone</th><th>Always-on canon</th><th>Milestone-specific skills</th></tr></thead>
+      <tbody>
+        <tr><td>M1</td><td>agentic-swe-master, modular-architecture, production-readiness</td><td>tdd, distributed-systems</td></tr>
+        <tr><td>M2</td><td>(canon)</td><td>tdd, data-systems-engineering, security-engineering</td></tr>
+        <tr><td>M3</td><td>(canon)</td><td>tdd, llmops-ai-agents, data-systems-engineering</td></tr>
+        <tr><td>M4</td><td>(canon)</td><td>tdd, production-readiness</td></tr>
+        <tr><td>M5</td><td>(canon)</td><td>tdd, llmops-ai-agents, security-engineering, distributed-systems</td></tr>
+        <tr><td>M6</td><td>(canon)</td><td>tdd, security-engineering</td></tr>
+        <tr><td>M7</td><td>(canon)</td><td>tdd, data-systems-engineering, llmops-ai-agents</td></tr>
+        <tr><td>M8</td><td>(canon)</td><td>tdd, data-systems-engineering, llmops-ai-agents</td></tr>
+        <tr><td>M9</td><td>(canon)</td><td>tdd, security-engineering, data-systems-engineering</td></tr>
+        <tr><td>M10</td><td>(canon)</td><td>tdd, production-readiness, llmops-ai-agents, security-engineering</td></tr>
+        <tr><td>frontend M*</td><td>(canon)</td><td><b>design-system skill (MANDATORY)</b>, tdd, qa <span class="note">— no frontend milestone in this plan; CMIS is API-only in v1</span></td></tr>
+      </tbody>
+    </table>
+    <p class="note">If a milestone needs a skill not listed, G1 logs "skill X needed but not on the menu — loaded ad hoc" so the choice is visible.</p>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# CURRENT
+- active_loop: NONE (next: L1 BUILD)
+- target: M1 — Compose skeleton + health check
+- iteration: 0
+- last_gate: G0 Existence Pre-Flight — verdict UNBUILT (computed: 0 source files, all M1 symbols absent)
+- last_action: genesis G0–G6 complete; ADRs 0001–0006 filed in decisions/; branch M1 created; G0 block written to checkpoints/M1.md
+- next_action: L1 BUILD iter 1 on M1 — docker-compose.yml (pgvector image + redis + api + worker services), Dockerfile, requirements.txt, app/config.py, app/api/main.py, app/api/routes_health.py, app/db/session.py, tests/acceptance/test_m1_health.py; then run the M1 demo command and paste the exit code
+- model: composer-2.5
+- tokens_used: 0
+- tokens_budget: 50000
+- skills_loaded: []
+- branch: M1 (no commits yet; .genesis/ untracked)

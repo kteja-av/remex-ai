@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Implementation Notes — remex-ai (rolling state)</title>
+<style>
+  :root { --bg:#0d1117; --card:#161b22; --line:#30363d; --ink:#e6edf3; --mut:#8b949e;
+          --ok:#2ea043; --warn:#d29922; --bad:#f85149; --accent:#58a6ff; }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.55 ui-sans-serif,-apple-system,Segoe UI,Roboto,sans-serif;}
+  .wrap{max-width:920px;margin:0 auto;padding:32px 24px 80px;}
+  h1{font-size:24px;margin:0 0 4px;}
+  h2{font-size:17px;margin:28px 0 10px;border-bottom:1px solid var(--line);padding-bottom:6px;}
+  .sub{color:var(--mut);margin:0 0 20px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:10px 0;}
+  .live{border-left:3px solid var(--ok);}
+  code{background:#1f2630;padding:1px 6px;border-radius:5px;font-size:13px;}
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+  th{color:var(--mut);font-weight:600;}
+  .pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--mut);}
+  .pill.live{color:var(--ok);border-color:var(--ok);} .pill.wip{color:var(--warn);border-color:var(--warn);} .pill.gone{color:var(--bad);border-color:var(--bad);}
+  .note{color:var(--mut);font-size:13px;}
+  ul{margin:6px 0;padding-left:20px;} li{margin:3px 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Implementation Notes — remex-ai</h1>
+  <p class="sub"><b>Rolling source of truth for what is LIVE right now.</b> The wiki can lag; this file
+     cannot. Read this on every session start to avoid rebuilding what exists. This is your
+     <i>git-like restart point</i>: if context is lost, this file rehydrates you.
+     Last updated: <code>2026-07-30</code> · by loop: <code>genesis (G0–G6)</code></p>
+
+  <!-- ───────────── ONE-LINE STATUS ───────────── -->
+  <div class="card live">
+    <b>Now in flight:</b> nothing yet — genesis ritual complete, no code written. M1 passed G0 Existence
+    Pre-Flight with verdict <b>UNBUILT</b>; L1 BUILD has not started.<br>
+    <b>Active loop:</b> NONE (next: L1 BUILD) · <b>Current milestone:</b> M1 — Compose skeleton + health
+    check · <b>Phase:</b> 13 Infrastructure &amp; Deployment (+3 Backend)<br>
+    <b>Blocked on:</b> nothing. Branch <code>M1</code> is checked out; <code>.genesis/</code> is untracked
+    (no commit made yet).
+  </div>
+
+  <!-- ───────────── WHAT'S LIVE ───────────── -->
+  <h2>What is actually built &amp; live</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>Capability</th><th>Where (file/route/symbol)</th><th>Status</th><th>Verified by</th></tr></thead>
+      <tbody>
+        <tr><td colspan="4" style="color:var(--mut);font-style:italic">nothing live yet — 0 source files in the repo (verified by G0 pre-flight grep, 2026-07-30). Append a row the moment a milestone passes L4 VERIFY.</td></tr>
+      </tbody>
+    </table>
+    <p class="note">Append a row the moment a milestone passes L4 VERIFY. The grep in G0 checks against this table.</p>
+  </div>
+
+  <!-- ───────────── DECISIONS THAT BIND ───────────── -->
+  <h2>Decisions that constrain new work</h2>
+  <div class="card">
+    <ul>
+      <li><code>ADR-0001</code> — Postgres + pgvector is the single storage engine (no separate vector DB) → see <code>decisions/0001-storage-engine-postgres-pgvector.md</code></li>
+      <li><code>ADR-0002</code> — selective admission: an LLM-judge Write Gate decides admit/reject/update before anything persists → see <code>decisions/0002-selective-admission-write-gate.md</code></li>
+      <li><code>ADR-0003</code> — the Write Gate is async and queue-backed (Redis), never inline on the request path → see <code>decisions/0003-write-gate-async-queue-backed.md</code></li>
+      <li><code>ADR-0004</code> — self-hosted single Docker Compose stack on a VPS; no managed cloud, so gates run inside the stack → see <code>decisions/0004-self-hosted-docker-compose.md</code></li>
+      <li><code>ADR-0005</code> — hybrid retrieval (pgvector + <code>tsvector</code> + Postgres entity-link table); no Neo4j, no Elasticsearch in v1 → see <code>decisions/0005-hybrid-retrieval.md</code></li>
+      <li><code>ADR-0006</code> — tenant isolation enforced by Postgres RLS on every memory-bearing table, not application filtering alone → see <code>decisions/0006-tenant-isolation-via-rls.md</code></li>
+      <li>add ADR pointers here so future loops don't relitigate settled calls</li>
+    </ul>
+  </div>
+
+  <!-- ───────────── DEVIATION LOG ───────────── -->
+  <h2>Deviations from plan (append-only — the "why we didn't do it the obvious way" log)</h2>
+  <div class="card">
+    <p class="note">Append a row whenever the agent couldn't follow approach A and switched to B.
+       This is the institutional memory genesis would otherwise lose silently.
+       Format: date · couldn't use X because Y · used Z instead · invariant impact.</p>
+    <table>
+      <thead><tr><th>Date</th><th>Milestone</th><th>Planned approach</th><th>Actual approach</th><th>Reason</th><th>Invariant impact</th></tr></thead>
+      <tbody>
+        <tr><td colspan="6" style="color:var(--mut);font-style:italic">no deviations yet — append a row when a plan change occurs</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ───────────── KNOWN GAPS / NEXT ───────────── -->
+  <h2>Known gaps &amp; the ordered Next list</h2>
+  <div class="card">
+    <ol>
+      <li>M1 L1 BUILD — write <code>docker-compose.yml</code> (postgres+pgvector, redis, api), <code>Dockerfile</code>, <code>requirements.txt</code>, <code>app/config.py</code>, <code>app/api/main.py</code>, <code>app/api/routes_health.py</code>, <code>app/db/session.py</code>, and <code>tests/acceptance/test_m1_health.py</code>.</li>
+      <li>M1 exit — run the demo command, then L4 VERIFY in a separate session on <code>claude-opus-5-thinking-high</code>.</li>
+      <li>Not yet built and deliberately deferred: the <code>tests/invariants/</code> suite referenced by <code>context-graph.json</code> lands with the milestone that first makes each invariant meaningful (RLS → M2, fail-open → M4, PII/provenance + api/worker separation → M5).</li>
+    </ol>
+    <p class="note">Mirror of <code>checkpoints/CURRENT.md → next_action</code>, but human-readable and durable across compaction.</p>
+  </div>
+
+  <!-- ───────────── SESSION LOG (append-only) ───────────── -->
+  <h2>Session log (append-only, newest first)</h2>
+  <div class="card">
+    <p><code>2026-07-30</code> — Installed the genesis kit (had to use Git Bash; the installer's
+       <code>set -o pipefail</code> fails under this machine's default bash). Scaffolded the
+       <code>.genesis/</code> spine into an empty repo and ran the full genesis ritual G0–G6 against the CMIS
+       system design v1: cognitive job + 5-question diagnostic written into <code>DONE.html</code> §1, three
+       approaches brainstormed in <code>PLAN.md</code> (chose selective admission with an async Write Gate),
+       context graph seeded with 26 nodes / 34 edges / 5 hand-written invariants (0 cycles), 29 verified
+       swe-kit wiki pointers, definition of done copied from 15 phase gates, plan sliced into 10 milestones
+       each with an exact demo command, and ADRs 0001–0006 split out of the design doc into
+       <code>decisions/</code>. Created branch <code>M1</code> and ran M1's G0 Existence Pre-Flight: 0 source
+       files, all proposed symbols absent → verdict UNBUILT. Nothing committed yet. Next: M1 L1 BUILD.</p>
+    <p class="note">One paragraph per session: what shipped, what broke, what's next. This is the narrative the next cold session reads first.</p>
+  </div>
+
+</div>
+</body>
+</html>
