@@ -7,18 +7,17 @@ MEMORY_BEARING_TABLES = ("memories", "memory_audit")
 
 
 def _tables() -> list[str]:
-    # Discovered, not hardcoded alone: any future table whose name suggests memory
-    # content must also be covered, or this invariant test fails.
+    # Default-deny inventory: every application table must be tenant isolated.
+    # Infrastructure-owned migration metadata is the sole explicit exception.
     with get_connection() as conn, conn.cursor(row_factory=dict_row) as cur:
         rows = cur.execute(
             """
             SELECT tablename FROM pg_tables
             WHERE schemaname = 'public'
-              AND (tablename LIKE '%memor%' OR tablename LIKE '%audit%')
+              AND tablename <> 'alembic_version'
             """
         ).fetchall()
-    discovered = {r["tablename"] for r in rows}
-    return sorted(discovered | set(MEMORY_BEARING_TABLES))
+    return sorted(r["tablename"] for r in rows)
 
 
 def test_rls_enabled_and_forced_on_every_memory_bearing_table() -> None:
@@ -53,6 +52,22 @@ def test_tenant_policy_exists_on_every_memory_bearing_table() -> None:
         assert "ALL" in commands or {"SELECT", "INSERT", "UPDATE", "DELETE"} <= commands, (
             f"{table}: policies do not cover all verbs: {commands}"
         )
+
+
+def test_tenant_scope_is_transaction_local() -> None:
+    import uuid
+
+    tenant_id = str(uuid.uuid4())
+    with get_tenant_connection(tenant_id) as conn:
+        scoped = conn.execute(
+            "SELECT current_setting('app.current_tenant', true)"
+        ).fetchone()
+        assert scoped is not None and scoped[0] == tenant_id
+        conn.commit()
+        cleared = conn.execute(
+            "SELECT current_setting('app.current_tenant', true)"
+        ).fetchone()
+        assert cleared is not None and cleared[0] in ("", None)
 
 
 @pytest.mark.parametrize("table", MEMORY_BEARING_TABLES)

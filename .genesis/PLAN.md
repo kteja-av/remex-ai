@@ -161,3 +161,8 @@ save, and what to fetch, backed by a thin key-value/file store and a large conte
   (demo 8/8 exit 0; ruff+mypy clean) → L4 VERIFY APPROVE (claude-opus-5-thinking-high, falsification
   probes passed) → quiz-me Q+A logged. Live: 4-service compose stack, real `GET /v1/health`
   (fail-open), heartbeat worker. 5 non-blocking follow-ups filed in `checkpoints/M1.md`.
+- **M3 — Naive write + vector retrieval baseline · DONE 2026-08-01.** L1 BUILD (3 iters) →
+  exact demo 9/9, full suite 29/29, invariants 7/7, ruff+mypy clean → first L4 rejected a saturated
+  eval; revised labeled dataset and metrics left measurable M5/M7 headroom → L4 retry APPROVE
+  (local encoding proven under `--network none`) → quiz-me Q+A logged. Frozen baseline:
+  precision 0.500, recall 1.000, precision@2 0.400.

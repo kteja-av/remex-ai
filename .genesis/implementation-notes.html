@@ -33,19 +33,19 @@
   <p class="sub"><b>Rolling source of truth for what is LIVE right now.</b> The wiki can lag; this file
      cannot. Read this on every session start to avoid rebuilding what exists. This is your
      <i>git-like restart point</i>: if context is lost, this file rehydrates you.
-     Last updated: <code>2026-07-30</code> · by loop: <code>L1 BUILD M2 (done) → next L1 BUILD M3</code></p>
+     Last updated: <code>2026-08-01</code> · by loop: <code>L1 BUILD M3 (done) → next L1 BUILD M4</code></p>
 
   <!-- ───────────── ONE-LINE STATUS ───────────── -->
   <div class="card live">
-    <b>M2 DONE:</b> Typed memory schema + migrations + RLS shipped — <code>memories</code> +
-    <code>memory_audit</code> tables (Alembic 0001–0003), RLS enabled <i>and forced</i> with a
-    tenant-GUC policy, request path on non-superuser role <code>cmis_app</code>. Cross-tenant
-    reads/writes provably blocked; unscoped SELECT returns zero rows; migrations rerunnable
-    (incl. <code>downgrade base</code>). L4 VERIFY APPROVE (28 adversarial probes held) + quiz-me Q+A logged.<br>
-    <b>Active loop:</b> NONE (next: L1 BUILD on M3) · <b>Current milestone:</b> M3 — Naive write +
-    vector retrieval baseline · <b>Phase:</b> 6 Memory Architecture<br>
-    <b>Blocked on:</b> nothing. M2 L4 follow-ups for M3 scope: #4 (<code>SET LOCAL</code> before pooling)
-    and #9 (invert RLS invariant to all-public-tables).
+    <b>M3 DONE:</b> Authenticated direct <code>POST /v1/memories</code> and vector-only
+    <code>GET /v1/memories:retrieve</code> shipped with a local, image-baked
+    <code>all-MiniLM-L6-v2</code> encoder, cosine HNSW index, transaction-local tenant scope, and
+    DB-enforced nonempty provenance. Frozen labeled baseline: precision <code>0.500</code>, recall
+    <code>1.000</code>, precision@2 <code>0.400</code>. L4 VERIFY APPROVE after independent no-network
+    encoding and baseline-headroom falsification; quiz-me Q+A logged.<br>
+    <b>Active loop:</b> NONE (next: L1 BUILD on M4) · <b>Current milestone:</b> M4 — Read path
+    fails open + token budgeting + citations · <b>Phase:</b> 12 Reliability (+6 Memory)<br>
+    <b>Blocked on:</b> nothing.
   </div>
 
   <!-- ───────────── WHAT'S LIVE ───────────── -->
@@ -65,6 +65,12 @@
           <td><code>alembic.ini</code> · <code>migrations/env.py</code> + <code>versions/0001_pgvector_extension.py</code> (Alembic now owns CREATE EXTENSION; M1 lifespan bootstrap removed) · <code>versions/0002_memories_audit_rls.py</code> (tables + ENABLE/FORCE RLS + tenant policies) · <code>versions/0003_app_role.py</code> (non-superuser <code>cmis_app</code>) · <code>app/db/models.py</code> (<code>MemoryRecord</code>, <code>AuditEventRecord</code>) · <code>app/domain/memory.py</code> (<code>MemoryType</code>/<code>MemoryStatus</code>/<code>AuditEvent</code> enums) · <code>app/db/session.py</code> (<code>get_tenant_connection</code> via <code>APP_DATABASE_URL</code>, GUC <code>app.current_tenant</code>) · <code>tests/conftest.py</code> (session-autouse <code>alembic upgrade head</code>)</td>
           <td><span class="pill live">LIVE</span></td>
           <td>demo command exit 0 (11/11) · full suite 19/19 · ruff+mypy clean · <code>downgrade -1 && upgrade head</code> and <code>downgrade base</code> rebuild both exit 0 · L4 VERIFY APPROVE (28 adversarial probes: GUC injection, forged-tenant DML, privilege escalation — all blocked) · Q+A in <code>checkpoints/M2.md</code></td>
+        </tr>
+        <tr>
+          <td>M3 — Naive write + local vector retrieval baseline</td>
+          <td><code>app/api/deps_auth.py</code> · <code>routes_memories.py</code> (<code>POST /v1/memories</code>) · <code>routes_retrieve.py</code> (<code>GET /v1/memories:retrieve</code>) · <code>app/embedding/local_encoder.py</code> (local 384d normalized encoder) · <code>app/retrieval/vector.py</code> (pgvector cosine search) · migrations <code>0004</code> HNSW + <code>0005</code> nonempty provenance · <code>evals/</code> labeled baseline/report</td>
+          <td><span class="pill live">LIVE</span></td>
+          <td>exact demo 9/9 · full suite 29/29 · invariants 7/7 · ruff+mypy clean · L4 VERIFY APPROVE (fresh claude-opus-5-thinking-high; no-network encode + metric-headroom probes passed) · Q+A in <code>checkpoints/M3.md</code></td>
         </tr>
       </tbody>
     </table>
@@ -94,7 +100,7 @@
     <table>
       <thead><tr><th>Date</th><th>Milestone</th><th>Planned approach</th><th>Actual approach</th><th>Reason</th><th>Invariant impact</th></tr></thead>
       <tbody>
-        <tr><td colspan="6" style="color:var(--mut);font-style:italic">no deviations yet — append a row when a plan change occurs</td></tr>
+        <tr><td>2026-08-01</td><td>M3</td><td>Strict listed-file freeze boundary</td><td>Added only required support wiring: <code>requirements.txt</code>, <code>Dockerfile</code>, <code>.dockerignore</code>, router registration, and migrations</td><td>The planned demo could not install/load the encoder, expose routes, or create the vector index without those files</td><td>Held; CPU-only local model and baked artifacts strengthen local-read and operability constraints</td></tr>
       </tbody>
     </table>
   </div>
@@ -103,10 +109,11 @@
   <h2>Known gaps &amp; the ordered Next list</h2>
   <div class="card">
     <ol>
-      <li>M3 G0 pre-flight, then L1 BUILD — local <code>sentence-transformers</code> encoder, vector-only retrieval, <code>POST /v1/memories</code> + <code>GET /v1/memories:retrieve</code>, <code>deps_auth</code>, evals baseline JSON. Take M2 L4 follow-ups #4 (<code>SET LOCAL</code> before pooling) and #9 (invert RLS invariant to all-public-tables) into scope.</li>
-      <li>Non-blocking L4 follow-ups from M2 (see <code>checkpoints/M2.md</code>): audit append-only enforcement by M6; FK existence oracle → composite <code>(tenant_id, id)</code> FK by M9; validate tenant UUID at boundary; parameterize 0003 role name/password; user-level policy in M9; <code>updated_at</code> trigger; embedding index with M3.</li>
-      <li>Non-blocking L4 follow-ups from M1 (fix in M2/M5, see <code>checkpoints/M1.md</code>): worker healthcheck 30s vs 15s drift; shared <code>image:</code> tag for api/worker; centralize <code>HEARTBEAT_KEY</code> in <code>app/config.py</code>; invariant test should parse compose YAML and catch transitive imports.</li>
-      <li>Remaining deferred invariant tests land with their milestone (fail-open → M4, PII/provenance → M5).</li>
+      <li>M4 G0 pre-flight, then L1 BUILD — fail-open retrieval, token budgeting, rank-aware placement, and per-item citations.</li>
+      <li>M3 L4 non-blocking follow-ups (see <code>checkpoints/M3.md</code>): add retrieval recall/nDCG before M7; compare report <code>k</code>/shape/model as well as dataset id; persist per-hit scores; reject NULL provenance-array elements; consider encoder warm-up/health coverage.</li>
+      <li>Remaining M2 follow-ups: audit append-only enforcement by M6; composite tenant-scoped FK by M9; parameterize 0003 role credentials; user-level policy in M9; <code>updated_at</code> trigger. M3 completed transaction-local GUC, all-public RLS inventory, UUID boundary validation, embedding index, and nonempty provenance.</li>
+      <li>Non-blocking L4 follow-ups from M1 (fix in M5, see <code>checkpoints/M1.md</code>): worker healthcheck 30s vs 15s drift; shared <code>image:</code> tag for api/worker; centralize <code>HEARTBEAT_KEY</code> in <code>app/config.py</code>; invariant test should parse compose YAML and catch transitive imports.</li>
+      <li>Remaining deferred invariant tests land with their milestone (fail-open → M4; PII precedence → M5).</li>
     </ol>
     <p class="note">Mirror of <code>checkpoints/CURRENT.md → next_action</code>, but human-readable and durable across compaction.</p>
   </div>
@@ -114,6 +121,13 @@
   <!-- ───────────── SESSION LOG (append-only) ───────────── -->
   <h2>Session log (append-only, newest first)</h2>
   <div class="card">
+    <p><code>2026-08-01</code> — <b>M3 DONE.</b> Shipped authenticated naive writes and local
+       vector-only retrieval with image-baked all-MiniLM-L6-v2, CPU-only PyTorch, cosine HNSW,
+       transaction-local RLS tenant scope, and DB-enforced nonempty provenance. The first L4 rejected
+       a saturated four-item eval whose metrics could not be beaten; iter 3 expanded it to a stable
+       eight-candidate/five-query labeled set with admission and retrieval headroom. Final gates:
+       demo 9/9, full suite 29/29, invariants 7/7, ruff+mypy clean; L4 retry APPROVE after independent
+       no-network encoding and metric probes. Quiz-me Q+A user-delegated and logged. Next: M4 G0.</p>
     <p><code>2026-07-30</code> — Installed the genesis kit (had to use Git Bash; the installer's
        <code>set -o pipefail</code> fails under this machine's default bash). Scaffolded the
        <code>.genesis/</code> spine into an empty repo and ran the full genesis ritual G0–G6 against the CMIS
