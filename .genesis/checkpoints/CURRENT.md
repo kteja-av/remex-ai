@@ -1,16 +1,11 @@
 # CURRENT
-- active_loop: NONE (M3 DONE — next: L1 BUILD on M4)
+- active_loop: NONE (M4 L4 VERIFY APPROVE — ready to append PLAN progress)
 - target: M4 — Read path fails open + token budgeting + citations
-- iteration: 0
-- last_gate: L4 VERIFY APPROVE + quiz-me Q+A logged (M3.md)
-- last_action: M3 complete — authenticated naive writes, local 384d embeddings, vector-only
-  pgvector retrieval, DB-enforced nonempty provenance, transaction-local tenant scope, and frozen
-  beatable baseline (precision 0.500, recall 1.000, precision@2 0.400); 29/29 full suite green
-- next_action: M4 G0 Existence Pre-Flight, then L1 BUILD on fail-open retrieval, token budgeting,
-  rank-aware placement, and per-item citations
-- model: GPT-5.6 Sol
-- tokens_used: ~45000
-- tokens_budget: 50000
-- skills_loaded: [agentic-swe-master, production-readiness, modular-architecture,
-  llmops-ai-agents, data-systems-engineering]
-- branch: M3 (do not push per user)
+- iteration: 2 (L4 fix + re-verify)
+- last_gate: G5 (L4 VERIFY APPROVE) · all 5 hard constraints PASS; quiz-me questions logged
+- last_action: L4 fix for D1 (encoder load failure escape path), D2 (exception logging), plus regression test
+- next_action: append M4 row to PLAN.md progress section (user to decide commit)
+- model: claude-opus-5-thinking-high (L4 verification)
+- verdict: APPROVE (D1 defect found, fixed; all gates now green: 14/14 demo, 43/43 full suite, 13/13 invariants)
+- non-blocking follow-ups: D3 (statement_timeout), D4 (transitive import guard), D5–D8 (budget edge cases)
+- branch: M4 (uncommitted; fixes in working tree)

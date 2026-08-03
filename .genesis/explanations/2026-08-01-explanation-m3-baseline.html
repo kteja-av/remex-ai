@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M3 Baseline: Naive Write + Vector Retrieval</title>
+    <style>
+        * { box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            margin: 0;
+            padding: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            border-left: 5px solid #2563eb;
+        }
+        
+        h1 {
+            margin: 0 0 10px 0;
+            color: #1e40af;
+            font-size: 2.2em;
+        }
+        
+        .subtitle {
+            font-size: 1.1em;
+            color: #666;
+            margin: 15px 0 0 0;
+        }
+        
+        .toc {
+            background: #f0f4f8;
+            padding: 20px 30px;
+            border-radius: 6px;
+            margin-bottom: 30px;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .toc h2 {
+            margin-top: 0;
+            color: #1e40af;
+            font-size: 1.1em;
+        }
+        
+        .toc ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .toc li {
+            padding: 6px 0;
+        }
+        
+        .toc a {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        
+        section {
+            background: white;
+            padding: 30px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        h2 {
+            color: #1e40af;
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        h3 {
+            color: #2563eb;
+            margin-top: 20px;
+        }
+        
+        .callout {
+            background: #f0f4f8;
+            border-left: 4px solid #3b82f6;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 4px;
+            font-size: 0.95em;
+        }
+        
+        .callout.definition {
+            border-left-color: #8b5cf6;
+            background: #faf5ff;
+        }
+        
+        .callout.important {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+        
+        .callout.example {
+            border-left-color: #10b981;
+            background: #f0fdf4;
+        }
+        
+        .callout strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #1e40af;
+        }
+        
+        pre {
+            background: #1f2937;
+            color: #e5e7eb;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+            font-size: 0.85em;
+            line-height: 1.5;
+        }
+        
+        code {
+            font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        
+        pre code {
+            background: none;
+            padding: 0;
+        }
+        
+        .diagram {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 6px;
+        }
+        
+        .diagram-box {
+            border: 2px solid #d1d5db;
+            border-radius: 6px;
+            padding: 15px;
+            background: white;
+        }
+        
+        .diagram-label {
+            font-weight: bold;
+            color: #374151;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+        
+        .flow {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .flow-box {
+            background: #dbeafe;
+            border: 1px solid #0284c7;
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            flex: 1;
+        }
+        
+        .flow-arrow {
+            color: #0284c7;
+            font-weight: bold;
+            flex: 0 0 30px;
+            text-align: center;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+        
+        th, td {
+            border: 1px solid #d1d5db;
+            padding: 10px;
+            text-align: left;
+        }
+        
+        th {
+            background: #f3f4f6;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        tr:nth-child(even) {
+            background: #f9fafb;
+        }
+        
+        .quiz-section {
+            margin-top: 40px;
+        }
+        
+        .quiz-question {
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-radius: 6px;
+        }
+        
+        .quiz-question.answered {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+        
+        .quiz-question.answered.incorrect {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+        
+        .quiz-num {
+            color: #2563eb;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .quiz-text {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 15px;
+            font-size: 1em;
+        }
+        
+        .quiz-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .quiz-option {
+            background: white;
+            border: 1px solid #d1d5db;
+            padding: 12px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .quiz-option:hover:not(.disabled) {
+            background: #f3f4f6;
+            border-color: #9ca3af;
+        }
+        
+        .quiz-option.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .quiz-option input[type="radio"] {
+            margin: 0;
+            flex-shrink: 0;
+        }
+        
+        .quiz-feedback {
+            margin-top: 15px;
+            padding: 12px 15px;
+            border-radius: 4px;
+            display: none;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+        
+        .quiz-feedback.show {
+            display: block;
+        }
+        
+        .quiz-feedback.correct {
+            background: #dcfce7;
+            border-left: 4px solid #16a34a;
+            color: #166534;
+        }
+        
+        .quiz-feedback.incorrect {
+            background: #fee2e2;
+            border-left: 4px solid #dc2626;
+            color: #991b1b;
+        }
+        
+        .feedback-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        @media (max-width: 600px) {
+            header {
+                padding: 25px 20px;
+            }
+            
+            h1 {
+                font-size: 1.6em;
+            }
+            
+            section {
+                padding: 20px;
+            }
+            
+            .diagram {
+                grid-template-columns: 1fr;
+            }
+            
+            .flow {
+                flex-direction: column;
+            }
+            
+            .flow-arrow {
+                transform: rotate(90deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>M3 Baseline: Naive Write + Vector Retrieval</h1>
+        <p class="subtitle">Building the foundation for semantic memory storage and search in remex-ai</p>
+    </header>
+
+    <nav class="toc">
+        <h2>Table of Contents</h2>
+        <ul>
+            <li><a href="#background">Background</a></li>
+            <li><a href="#intuition">Intuition</a></li>
+            <li><a href="#code">Code Implementation</a></li>
+            <li><a href="#quiz">Quiz</a></li>
+        </ul>
+    </nav>
+
+    <section id="background">
+        <h2>Background</h2>
+        
+        <h3>What is remex-ai?</h3>
+        <p><strong>remex-ai</strong> is a multi-tenant conversational agent platform that learns about user preferences and context. It needs to remember conversations so it can retrieve relevant facts later—think of a personal AI assistant that remembers what you've told it.</p>
+
+        <p>The challenge: when you have millions of past conversations, how do you efficiently find what's relevant to the current question? That's where <em>vector embeddings</em> and semantic search come in.</p>
+
+        <div class="callout definition">
+            <strong>Vector Embedding:</strong> A fixed-length list of numbers representing the semantic meaning of text. For example, "I love Python" and "Python is my favorite language" produce very similar embeddings because they express the same idea. The M3 system uses 384-dimensional embeddings.
+        </div>
+
+        <h3>The Memory Record: Data Structure</h3>
+        <p>Each stored fact is a <code>MemoryRecord</code> with these core fields:</p>
+        <table>
+            <tr>
+                <th>Field</th>
+                <th>Type</th>
+                <th>Purpose</th>
+            </tr>
+            <tr>
+                <td><code>id</code></td>
+                <td>UUID</td>
+                <td>Unique identifier</td>
+            </tr>
+            <tr>
+                <td><code>tenant_id</code></td>
+                <td>UUID</td>
+                <td>Multi-tenant isolation; which customer owns this?</td>
+            </tr>
+            <tr>
+                <td><code>user_id</code></td>
+                <td>UUID</td>
+                <td>Within a tenant, which user owns this?</td>
+            </tr>
+            <tr>
+                <td><code>content</code></td>
+                <td>String</td>
+                <td>The human-readable text (e.g., "I prefer Python")</td>
+            </tr>
+            <tr>
+                <td><code>embedding</code></td>
+                <td>vector(384)</td>
+                <td>Semantic representation; used for similarity search</td>
+            </tr>
+            <tr>
+                <td><code>source_turn_ids</code></td>
+                <td>UUID[]</td>
+                <td>Which turns created this memory? (provenance)</td>
+            </tr>
+            <tr>
+                <td><code>status</code></td>
+                <td>Enum</td>
+                <td>"active" or other states; retrieved only if active</td>
+            </tr>
+        </table>
+
+        <div class="callout important">
+            <strong>RLS (Row-Level Security):</strong> Earlier migrations set up PostgreSQL RLS policies that enforce tenant isolation at the database layer. The rule is simple: a query can only see rows where the tenant matches <code>app.current_tenant</code> (a transaction-local variable). Even if a bug leaks a connection, the database itself prevents one tenant from seeing another's data.
+        </div>
+
+        <h3>The Constraint: Superusers Bypass RLS</h3>
+        <p>By M2, the system was already using Alembic migrations and PostgreSQL RLS. But there was a hidden bug: the application connected as <code>cmis</code> (a superuser), and <strong>superusers bypass RLS</strong> unconditionally in PostgreSQL. That meant RLS policies were present but not enforced.</p>
+
+        <p>M3 solves this by introducing a new non-superuser role <code>cmis_app</code> for application requests. Migrations stay on the owner role (<code>cmis</code), but every request that reads/writes memories connects as <code>cmis_app</code>—triggering RLS enforcement.</p>
+
+        <div class="callout important">
+            <strong>Migration 0003 (Non-Superuser Role):</strong> Creates the <code>cmis_app</code> role, grants it minimal permissions on memories tables, and ensures transaction-local tenant GUCs reset after commit (so pooled connections don't leak tenant context).
+        </div>
+    </section>
+
+    <section id="intuition">
+        <h2>Intuition</h2>
+
+        <h3>The M3 Workflow</h3>
+        <p>M3 is deliberately <em>naive</em>—a baseline with zero sophistication:</p>
+        
+        <div class="flow">
+            <div class="flow-box"><strong>1. Receive Memory</strong><br/>Client sends authenticated POST with text + metadata</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box"><strong>2. Encode Locally</strong><br/>Text is converted to a 384-dim vector via SentenceTransformers</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box"><strong>3. Store Everything</strong><br/>Every candidate is persisted; no filtering, no write gate</div>
+        </div>
+
+        <div class="flow">
+            <div class="flow-box"><strong>4. Search Request</strong><br/>Client sends query text + auth headers</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box"><strong>5. Encode Query</strong><br/>Same encoder; same 384 dimensions</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box"><strong>6. Vector Similarity</strong><br/>Find nearest neighbors using HNSW index</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box"><strong>7. Return Results</strong><br/>Top-k memories with similarity scores (0–1 range)</div>
+        </div>
+
+        <h3>Toy Example</h3>
+        <p>Imagine a single user stores two memories:</p>
+        <table>
+            <tr>
+                <th>Memory ID</th>
+                <th>Content</th>
+                <th>Embedding (simplified)</th>
+            </tr>
+            <tr>
+                <td>mem-1</td>
+                <td>"I love Python"</td>
+                <td>[0.8, 0.2, ...]</td>
+            </tr>
+            <tr>
+                <td>mem-2</td>
+                <td>"Cats are great"</td>
+                <td>[0.1, 0.9, ...]</td>
+            </tr>
+        </table>
+
+        <p>Later, the user queries "What's my favorite programming language?"</p>
+        <p>The query embedding is <code>[0.75, 0.25, ...]</code>—semantically very close to mem-1. A cosine-distance search returns mem-1 with a high score (e.g., 0.95), and mem-2 with a low score (e.g., 0.10).</p>
+
+        <div class="callout example">
+            <strong>Score Formula:</strong> <code>score = 1 - (cosine_distance / 2)</code><br/>
+            This converts the pgvector distance (0–2 range) to a 0–1 similarity score. Clamped to prevent edge cases: <code>GREATEST(0.0, LEAST(1.0, ...))</code>
+        </div>
+
+        <h3>Why "Naive"?</h3>
+        <p>M3 stores everything. No filtering. Later phases (M5, M7) will add:</p>
+        <ul>
+            <li><strong>M5 Write Gate:</strong> A learned classifier decides which facts are worth remembering.</li>
+            <li><strong>M7 Retrieval Ranking:</strong> Multiple signals (semantic relevance, recency, importance) are combined to rank results better.</li>
+        </ul>
+        
+        <p>For now, M3 is the <em>oracle baseline</em>: it recalls everything that was stored, so we can measure what headroom M5/M7 have to improve.</p>
+    </section>
+
+    <section id="code">
+        <h2>Code Implementation</h2>
+
+        <h3>1. Authentication & Multi-Tenancy</h3>
+        <p><strong>File:</strong> <code>app/api/deps_auth.py</code></p>
+        
+        <p>Every API request must carry two headers: <code>X-Tenant-ID</code> and <code>X-User-ID</code>. This is a <em>host-app boundary</em>—we trust the frontend to pass the right identity.</p>
+
+        <pre><code>@dataclass(frozen=True)
+class AuthContext:
+    tenant_id: UUID
+    user_id: UUID
+
+def authenticated_identity(
+    tenant_id: Annotated[UUID, Header(alias="X-Tenant-ID")],
+    user_id: Annotated[UUID, Header(alias="X-User-ID")],
+) -> AuthContext:
+    return AuthContext(tenant_id=tenant_id, user_id=user_id)</code></pre>
+
+        <p>FastAPI's <code>Depends()</code> extracts these headers on every request and creates an <code>AuthContext</code>. If either header is missing or invalid, the request fails with HTTP 422.</p>
+
+        <h3>2. Encoding: SentenceTransformers</h3>
+        <p><strong>File:</strong> <code>app/embedding/local_encoder.py</code></p>
+
+        <p>The encoder is a lazy singleton. On first call, it loads the pre-baked model from the Docker image and validates that it emits exactly 384 dimensions:</p>
+
+        <pre><code>@lru_cache(maxsize=1)
+def get_encoder() -> LocalEncoder:
+    return LocalEncoder()
+
+class LocalEncoder:
+    def __init__(self, model_path: str | None = None) -> None:
+        path = model_path or os.environ.get(
+            "EMBEDDING_MODEL_PATH", DEFAULT_MODEL_PATH
+        )
+        model_class = getattr(
+            import_module("sentence_transformers"), "SentenceTransformer"
+        )
+        self._model = cast(
+            _SentenceTransformerModel,
+            model_class(path, local_files_only=True, device="cpu"),
+        )
+        dimension = self._model.get_embedding_dimension()
+        if dimension != EMBEDDING_DIMENSION:
+            raise RuntimeError(
+                f"encoder emits {dimension} dimensions; schema requires {EMBEDDING_DIMENSION}"
+            )</code></pre>
+
+        <div class="callout">
+            <strong>Key Detail:</strong> <code>local_files_only=True</code> means the model is offline. The Docker image pre-downloads it; no network calls during inference.
+        </div>
+
+        <h3>3. Vector Storage & Retrieval</h3>
+        <p><strong>File:</strong> <code>app/retrieval/vector.py</code></p>
+
+        <p>Storage inserts a memory row with the embedding as a pgvector:</p>
+
+        <pre><code>def store_memory(
+    *,
+    tenant_id: UUID,
+    user_id: UUID,
+    memory_type: MemoryType,
+    content: str,
+    source_turn_ids: list[UUID],
+    embedding: list[float],
+    importance: float = 0.5,
+) -> MemoryRecord:
+    with (
+        get_tenant_connection(str(tenant_id)) as conn,
+        conn.cursor(row_factory=dict_row) as cur,
+    ):
+        row = cur.execute(
+            """
+            INSERT INTO memories (
+                tenant_id, user_id, type, content, embedding,
+                source_turn_ids, importance
+            )
+            VALUES (%s, %s, %s, %s, %s::vector, %s, %s)
+            RETURNING ...
+            """,
+            (tenant_id, user_id, memory_type.value, content,
+             _vector_literal(embedding), source_turn_ids, importance),
+        ).fetchone()
+    return MemoryRecord.from_row(row)</code></pre>
+
+        <div class="callout">
+            <strong>Tenant Connection:</strong> <code>get_tenant_connection(str(tenant_id))</code> connects as <code>cmis_app</code> and sets the transaction-local GUC: <code>app.current_tenant = tenant_id</code>. The RLS policy sees this and allows only matching rows.
+        </div>
+
+        <p>Retrieval searches for neighbors using pgvector's cosine-distance operator (<code>&lt;=&gt;</code>) and an HNSW index:</p>
+
+        <pre><code>def retrieve_similar(
+    *,
+    tenant_id: UUID,
+    user_id: UUID,
+    query_embedding: list[float],
+    limit: int,
+) -> list[VectorHit]:
+    vector = _vector_literal(query_embedding)
+    with (
+        get_tenant_connection(str(tenant_id)) as conn,
+        conn.cursor(row_factory=dict_row) as cur,
+    ):
+        rows = cur.execute(
+            """
+            SELECT id, tenant_id, user_id, type, content, source_turn_ids,
+                   created_at, updated_at, importance, decay_weight, status,
+                   NULL::vector AS embedding, supersedes, write_gate_decision,
+                   GREATEST(0.0, LEAST(1.0, 1.0 - (embedding <=> %s::vector)))
+                       AS score
+            FROM memories
+            WHERE user_id = %s
+              AND status = 'active'
+              AND embedding IS NOT NULL
+            ORDER BY embedding <=> %s::vector
+            LIMIT %s
+            """,
+            (vector, user_id, vector, limit),
+        ).fetchall()
+    return [VectorHit(memory=MemoryRecord.from_row(row), score=float(row["score"]))
+            for row in rows]</code></pre>
+
+        <div class="callout important">
+            <strong>User Scope:</strong> The WHERE clause filters by <code>user_id = %s</code> not just tenant. This is deliberate: a tenant's multiple users don't share memories. RLS enforces tenant isolation; this app-level filter adds per-user scoping.
+        </div>
+
+        <h3>4. API Routes</h3>
+        <p><strong>File:</strong> <code>app/api/routes_memories.py</code> (write) and <code>app/api/routes_retrieve.py</code> (read)</p>
+
+        <p><strong>Create memory (POST /v1/memories):</strong></p>
+
+        <pre><code>@router.post("/memories", response_model=MemoryResponse,
+             status_code=status.HTTP_201_CREATED)
+def create_memory(
+    request: CreateMemoryRequest,
+    identity: Annotated[AuthContext, Depends(authenticated_identity)],
+    encoder: Annotated[Encoder, Depends(get_encoder)],
+) -> MemoryResponse:
+    """M3 baseline only: directly persist every authenticated candidate."""
+    record = store_memory(
+        tenant_id=identity.tenant_id,
+        user_id=identity.user_id,
+        memory_type=request.type,
+        content=request.content,
+        source_turn_ids=request.source_turn_ids,
+        importance=request.importance,
+        embedding=encoder.encode(request.content),
+    )
+    return MemoryResponse(...)</code></pre>
+
+        <p><strong>Retrieve memories (GET /v1/memories:retrieve):</strong></p>
+
+        <pre><code>@router.get("/memories:retrieve", response_model=RetrieveResponse)
+def retrieve_memories(
+    query: Annotated[str, Query(min_length=1, max_length=10_000)],
+    identity: Annotated[AuthContext, Depends(authenticated_identity)],
+    encoder: Annotated[Encoder, Depends(get_encoder)],
+    limit: Annotated[int, Query(ge=1, le=50)] = 5,
+) -> RetrieveResponse:
+    hits = retrieve_similar(
+        tenant_id=identity.tenant_id,
+        user_id=identity.user_id,
+        query_embedding=encoder.encode(query),
+        limit=limit,
+    )
+    return RetrieveResponse(
+        memories=[
+            RetrievedMemory(
+                id=hit.memory.id,
+                type=hit.memory.type,
+                content=hit.memory.content,
+                source_turn_ids=hit.memory.source_turn_ids,
+                created_at=hit.memory.created_at,
+                score=hit.score,
+            )
+            for hit in hits
+        ]
+    )</code></pre>
+
+        <h3>5. Baseline Evaluation</h3>
+        <p><strong>File:</strong> <code>evals/run.py</code>, <code>evals/suites/baseline.json</code></p>
+
+        <p>The labeled eval suite has 8 candidate facts (4 "admit", 4 "distractor") and 5 queries (4 with answers, 1 no-answer). For each query, the eval reports:</p>
+        
+        <ul>
+            <li><strong>Precision:</strong> Of all facts stored, how many should have been? (directly measures admission quality)</li>
+            <li><strong>Recall:</strong> Of facts that should have been stored, how many were? (1.0 in M3: we store everything)</li>
+            <li><strong>Precision@k:</strong> Of the k=2 results returned by the retriever, how many are relevant? (retrieval ranking quality)</li>
+        </ul>
+
+        <p>M3 scores: <code>precision=0.500, recall=1.000, precision@2=0.400</code>. This leaves headroom: M5 can improve admission precision to 1.0 (store only relevant facts), and M7 can improve ranking precision@k above 0.4.</p>
+    </section>
+
+    <section id="quiz" class="quiz-section">
+        <h2>Quiz</h2>
+        <p>Test your understanding of M3's design and behavior. Click an option to check your answer.</p>
+
+        <div id="quiz-1" class="quiz-question">
+            <div class="quiz-num">Question 1</div>
+            <div class="quiz-text">Why does M3 need to create a non-superuser role (<code>cmis_app</code>) instead of connecting as the owner role (<code>cmis</code>)?</div>
+            <div class="quiz-options">
+                <label class="quiz-option">
+                    <input type="radio" name="q1" value="a">
+                    <span>Superusers bypass RLS policies; a superuser can see all rows regardless of tenant_id. Application requests must be non-superuser to trigger RLS enforcement.</span>
+                </label>
+                <label class="quiz-option">
+                    <input type="radio" name="q1" value="b">
+                    <span>Non-superuser roles execute queries faster because they don't have permission to see system catalogs.</span>
+                </label>
+                <label class="quiz-option">
+                    <input type="radio" name="q1" value="c">
+                    <span>Superusers are not allowed to use transaction-local GUCs, so we need a non-superuser to set <code>app.current_tenant</code>.</span>
+                </label>
+                <label class="quiz-option">
+                    <input type="radio" name="q1" value="d">
+                    <span>The <code>cmis</code> role is reserved for migrations only and cannot be used for read/write application queries.</span>
+                </label>
+            </div>
+            <div class="quiz-feedback"></div>
+        </div>
+
+        <div id="quiz-2" class="quiz-question">
+            <div class="quiz-num">Question 2</div>
+            <div class="quiz-text">In the <code>retrieve_similar</code> function, what does <code>NULL::vector AS embedding</code> accomplish, and why is it done?</div>
+            <div class="quiz-options">
+                <label class="quiz-option">
+                    <input type="radio" name="q2" value="a">
+                    <span>It returns NULL to prevent the 384-dimensional embedding vectors from being sent to the client, reducing bandwidth and avoiding leaking raw embeddings to the API response.</span>
+                </label>
+                <label class="quiz-option">
+                    <input type="radio" name="q2" value="b">
+                    <span>It sets the embedding to NULL to mark stale records that need re-encoding.</span>
+                </label>
+                <label class="quiz-option">
+                    <input type="radio" name="q2" value="c">
+                    <span>It tells PostgreSQL to skip the vector similarity computation for performance.</span>
+                </label>
+                <label class="quiz-option">
+                    <input type="radio" name="q2" value="d">
+                    <span>It removes duplicates from the result set before ordering by distance.</span>
+                </label>
+            </div>
+            <div class="quiz-feedback"></div>
+        </div>
+
+        <div id="quiz-3" class="quiz-question">
+            <div class="quiz-num">Question 3</div>
+            <div class="quiz-text">The M3 baseline deliberately stores every authenticated candidate. What metric constraint does this create for M5's Write Gate?</div>
+            <div class="quiz-options">
+                <label class="quiz-option">
+                    <input type="radio" name="q3" value="a">
+                    <span>M5's admission precision can improve above 0.5 (M3's 50% of stored facts are relevant) by filtering out distractor candidates; recall remains the measurement of what M5 actually admits and persists.</span>
+                </label>
+                <label class="quiz-option">
+                    <input type="radio" name="q3" value="b">
+                    <span>M5 must accept at least half of all candidates to remain comparable to M3's baseline.</span>
+                </label>
+                <label class="quiz-option">
+                    <input type="radio" name="q3" value="c">
+                    <span>M5 cannot improve because M3 already has perfect recall (1.0); any filtering would decrease recall below M3.</span>
+                </label>
+                <label class="quiz-option">
+                    <input type="radio" name="q3" value="d">
+                    <span>M5 must report metrics against a completely different eval dataset to avoid conflation.</span>
+                </label>
+            </div>
+            <div class="quiz-feedback"></div>
+        </div>
+
+        <div id="quiz-4" class="quiz-question">
+            <div class="quiz-num">Question 4</div>
+            <div class="quiz-text">After a pooled database connection commits a transaction and the connection is returned to the pool, what does the RLS query see if the pool immediately hands the connection to a different tenant's request without reconnecting?</div>
+            <div class="quiz-options">
+                <label class="quiz-option">
+                    <input type="radio" name="q4" value="a">
+                    <span>The transaction-local <code>app.current_tenant</code> GUC persists across commits; the new tenant's query would see rows from the previous tenant's data.</span>
+                </label>
+                <label class="quiz-option">
+                    <input type="radio" name="q4" value="b">
+                    <span>The transaction-local GUC is reset to NULL/empty after commit. <code>tenant_id = NULL</code> evaluates to unknown, the RLS policy rejects it, and the query returns zero rows—preventing leakage.</span>
+                </label>
+                <label class="quiz-option">
+                    <input type="radio" name="q4" value="c">
+                    <span>PostgreSQL automatically raises an error if you try to reuse a connection with stale tenant state.</span>
+                </label>
+                <label class="quiz-option">
+                    <input type="radio" name="q4" value="d">
+                    <span>The database connects as <code>cmis</code> by default, which is a superuser and bypasses RLS anyway.</span>
+                </label>
+            </div>
+            <div class="quiz-feedback"></div>
+        </div>
+
+        <div id="quiz-5" class="quiz-question">
+            <div class="quiz-num">Question 5</div>
+            <div class="quiz-text">The encoder is a lazy singleton with <code>@lru_cache(maxsize=1)</code>. Why not load the model at application startup instead?</div>
+            <div class="quiz-options">
+                <label class="quiz-option">
+                    <input type="radio" name="q5" value="a">
+                    <span>Loading at startup would block server startup by downloading the model from the internet; lazy loading defers this cost to the first request and avoids network calls.</span>
+                </label>
+                <label class="quiz-option">
+                    <input type="radio" name="q5" value="b">
+                    <span>Lazy loading reduces memory footprint if no requests ever call the encoder endpoint.</span>
+                </label>
+                <label class="quiz-option">
+                    <input type="radio" name="q5" value="c">
+                    <span>The model is already baked into the Docker image and is loaded instantly; lazy loading avoids redundant I/O on startup.</span>
+                </label>
+                <label class="quiz-option">
+                    <input type="radio" name="q5" value="d">
+                    <span>Lazy loading allows the model weights to be hot-reloaded without restarting the server.</span>
+                </label>
+            </div>
+            <div class="quiz-feedback"></div>
+        </div>
+
+        <div style="margin-top: 30px; padding-top: 30px; border-top: 2px solid #e5e7eb; text-align: center; color: #666; font-size: 0.95em;">
+            <p>✓ Quiz complete. Review your answers above.</p>
+        </div>
+    </section>
+
+    <script>
+        const quizData = {
+            q1: {
+                correct: 'a',
+                feedback: 'Correct! PostgreSQL superusers have an implicit bypass on all RLS policies. M3 solves the RLS enforcement bug from M2 by introducing a non-superuser role (<code>cmis_app</code>) for application connections. This way, the RLS predicate <code>tenant_id = app.current_tenant</code> is actually evaluated.'
+            },
+            q2: {
+                correct: 'a',
+                feedback: 'Correct! The 384-dimensional vector is only needed for similarity computation inside the database. Returning it to the client would waste bandwidth and unnecessarily expose the raw embedding. The SELECT explicitly casts it to NULL to exclude it from the result set while still computing similarity.'
+            },
+            q3: {
+                correct: 'a',
+                feedback: 'Correct! M3 achieves 0.5 precision (50% of stored facts are relevant) and 1.0 recall (we store every candidate). M5\'s Write Gate can improve precision by selectively filtering candidates; the evals framework uses the same labeled dataset, so M5\'s reported precision can exceed 0.5. Recall will measure what M5 actually admits and persists.'
+            },
+            q4: {
+                correct: 'b',
+                feedback: 'Correct! Transaction-local GUCs (set with the <code>true</code> flag) are reset after commit. In <code>get_tenant_connection</code>, <code>conn.execute("SELECT set_config(%s, %s, true)", ...)</code> sets <code>app.current_tenant</code> locally. After commit, it resets to NULL. If the next tenant\'s query evaluates <code>tenant_id = NULL</code>, the comparison is unknown and RLS rejects it, returning zero rows.'
+            },
+            q5: {
+                correct: 'c',
+                feedback: 'Correct! The model is pre-downloaded and baked into the Docker image at build time using <code>local_files_only=True</code>. Lazy loading avoids CPU/RAM overhead during server startup; loading only happens on the first encode request. This also keeps SentenceTransformers (and its PyTorch dependency) out of the API import path, avoiding static analysis overhead at startup.'
+            }
+        };
+
+        document.querySelectorAll('.quiz-options').forEach((container, idx) => {
+            const questionId = 'q' + (idx + 1);
+            const radios = container.querySelectorAll('input[type="radio"]');
+            
+            radios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const question = document.getElementById('quiz-' + (idx + 1));
+                    const feedback = question.querySelector('.quiz-feedback');
+                    const isCorrect = this.value === quizData[questionId].correct;
+                    
+                    radios.forEach(r => r.closest('.quiz-option').classList.add('disabled'));
+                    
+                    if (isCorrect) {
+                        question.classList.remove('answered-incorrect');
+                        question.classList.add('answered');
+                        feedback.classList.add('correct', 'show');
+                        feedback.innerHTML = '<div class="feedback-label">✓ Correct!</div>' + quizData[questionId].feedback;
+                    } else {
+                        question.classList.add('answered-incorrect');
+                        feedback.classList.add('incorrect', 'show');
+                        feedback.innerHTML = '<div class="feedback-label">✗ Not quite.</div>' + quizData[questionId].feedback;
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
