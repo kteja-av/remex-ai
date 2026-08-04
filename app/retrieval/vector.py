@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from psycopg.rows import dict_row
+from psycopg.types.json import Json
 
 from app.db.models import MemoryRecord
 from app.db.session import get_tenant_connection
@@ -32,6 +33,7 @@ def store_memory(
     source_turn_ids: list[UUID],
     embedding: list[float],
     importance: float = 0.5,
+    write_gate_decision: dict | None = None,
 ) -> MemoryRecord:
     with (
         get_tenant_connection(str(tenant_id)) as conn,
@@ -41,9 +43,9 @@ def store_memory(
             """
             INSERT INTO memories (
                 tenant_id, user_id, type, content, embedding,
-                source_turn_ids, importance
+                source_turn_ids, importance, write_gate_decision
             )
-            VALUES (%s, %s, %s, %s, %s::vector, %s, %s)
+            VALUES (%s, %s, %s, %s, %s::vector, %s, %s, %s)
             RETURNING id, tenant_id, user_id, type, content, source_turn_ids,
                       created_at, updated_at, importance, decay_weight, status,
                       NULL::vector AS embedding, supersedes, write_gate_decision
@@ -56,6 +58,7 @@ def store_memory(
                 _vector_literal(embedding),
                 source_turn_ids,
                 importance,
+                Json(write_gate_decision) if write_gate_decision else None,
             ),
         ).fetchone()
     if row is None:

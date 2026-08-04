@@ -166,3 +166,10 @@ save, and what to fetch, backed by a thin key-value/file store and a large conte
   eval; revised labeled dataset and metrics left measurable M5/M7 headroom → L4 retry APPROVE
   (local encoding proven under `--network none`) → quiz-me Q+A logged. Frozen baseline:
   precision 0.500, recall 1.000, precision@2 0.400.
+- **M5 — Async Write Gate (queue-backed) + pre-send PII filter · DONE 2026-08-04.** L1 BUILD (3 iters)
+  → G4 computed green (demo 14/14, ruff+mypy clean) → L4 REJECT (D1 30s delay test, D2 job tenant
+  leak) → iter 3 fixes → L4 APPROVE (claude-4.5-haiku-thinking) → quiz-me Q+A logged. Live:
+  `POST /v1/memories:evaluate` (202), tenant-scoped `GET /v1/jobs/{job_id}`, RQ worker + PII
+  pre-send gate, `LocalRuleJudge` fallback. Frozen write_gate eval: precision 1.000, recall 1.000,
+  precision@2 0.400 (delta precision +0.500 vs M3 baseline). Non-blocking: D3 (real LLM providers
+  untested in CI), D4 (test delay hook in prod).

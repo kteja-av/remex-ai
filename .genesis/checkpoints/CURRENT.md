@@ -1,11 +1,10 @@
 # CURRENT
-- active_loop: NONE (M4 L4 VERIFY APPROVE — ready to append PLAN progress)
-- target: M4 — Read path fails open + token budgeting + citations
-- iteration: 2 (L4 fix + re-verify)
-- last_gate: G5 (L4 VERIFY APPROVE) · all 5 hard constraints PASS; quiz-me questions logged
-- last_action: L4 fix for D1 (encoder load failure escape path), D2 (exception logging), plus regression test
-- next_action: append M4 row to PLAN.md progress section (user to decide commit)
-- model: claude-opus-5-thinking-high (L4 verification)
-- verdict: APPROVE (D1 defect found, fixed; all gates now green: 14/14 demo, 43/43 full suite, 13/13 invariants)
-- non-blocking follow-ups: D3 (statement_timeout), D4 (transitive import guard), D5–D8 (budget edge cases)
-- branch: M4 (uncommitted; fixes in working tree)
+- active_loop: NONE (M5 DONE — ready for M6 G0)
+- target: M6 — Append-only audit log + "why do you know this?"
+- iteration: 0
+- last_gate: G5 (L4 VERIFY APPROVE + quiz-me logged)
+- last_action: quiz-me Q+A logged; M5 closed; `Cache-Control: no-store` on job status
+- next_action: M6 G0 Existence Pre-Flight
+- model: composer
+- verdict: M5 DONE
+- branch: uncommitted working tree

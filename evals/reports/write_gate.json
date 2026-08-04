@@ -1,0 +1,87 @@
+{
+  "schema_version": 2,
+  "suite": "write_gate",
+  "generated_at": "2026-08-03T20:38:11.961216+00:00",
+  "encoder": {
+    "model": "sentence-transformers/all-MiniLM-L6-v2",
+    "dimensions": 384,
+    "normalized": true
+  },
+  "dataset": {
+    "id": "cmis-labeled-conversations-v1",
+    "memory_count": 8,
+    "should_admit_count": 4,
+    "query_count": 5
+  },
+  "metrics": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "precision_at_k": 0.4,
+    "k": 2
+  },
+  "metric_definitions": {
+    "precision": "admission precision over labeled candidates",
+    "recall": "admission recall over labeled candidates",
+    "precision_at_k": "micro retrieval precision across all returned top-k items"
+  },
+  "queries": [
+    {
+      "query": "Which coding language does the user like?",
+      "relevant": [
+        "language"
+      ],
+      "retrieved": [
+        "language",
+        "theme"
+      ],
+      "matched": 1
+    },
+    {
+      "query": "What outdoor activity does the user do on weekends?",
+      "relevant": [
+        "activity"
+      ],
+      "retrieved": [
+        "activity",
+        "theme"
+      ],
+      "matched": 1
+    },
+    {
+      "query": "Where is the user based?",
+      "relevant": [
+        "location"
+      ],
+      "retrieved": [
+        "location",
+        "theme"
+      ],
+      "matched": 1
+    },
+    {
+      "query": "What interface appearance does the user prefer?",
+      "relevant": [
+        "theme"
+      ],
+      "retrieved": [
+        "theme",
+        "language"
+      ],
+      "matched": 1
+    },
+    {
+      "query": "What is the user's favorite sports team?",
+      "relevant": [],
+      "retrieved": [
+        "language",
+        "activity"
+      ],
+      "matched": 0
+    }
+  ],
+  "comparison": {
+    "precision": 0.5,
+    "recall": 0.0,
+    "precision_at_k": 0.0
+  }
+}

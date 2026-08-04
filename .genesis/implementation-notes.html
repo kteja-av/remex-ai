@@ -33,18 +33,18 @@
   <p class="sub"><b>Rolling source of truth for what is LIVE right now.</b> The wiki can lag; this file
      cannot. Read this on every session start to avoid rebuilding what exists. This is your
      <i>git-like restart point</i>: if context is lost, this file rehydrates you.
-     Last updated: <code>2026-08-01</code> · by loop: <code>L1 BUILD M3 (done) → next L1 BUILD M4</code></p>
+     Last updated: <code>2026-08-04</code> · by loop: <code>L4 VERIFY M5 (done) → next G0 M6</code></p>
 
   <!-- ───────────── ONE-LINE STATUS ───────────── -->
   <div class="card live">
-    <b>M3 DONE:</b> Authenticated direct <code>POST /v1/memories</code> and vector-only
-    <code>GET /v1/memories:retrieve</code> shipped with a local, image-baked
-    <code>all-MiniLM-L6-v2</code> encoder, cosine HNSW index, transaction-local tenant scope, and
-    DB-enforced nonempty provenance. Frozen labeled baseline: precision <code>0.500</code>, recall
-    <code>1.000</code>, precision@2 <code>0.400</code>. L4 VERIFY APPROVE after independent no-network
-    encoding and baseline-headroom falsification; quiz-me Q+A logged.<br>
-    <b>Active loop:</b> NONE (next: L1 BUILD on M4) · <b>Current milestone:</b> M4 — Read path
-    fails open + token budgeting + citations · <b>Phase:</b> 12 Reliability (+6 Memory)<br>
+    <b>M5 DONE:</b> Async Write Gate shipped — <code>POST /v1/memories:evaluate</code> returns
+    <code>202 {job_id}</code>; Redis+RQ worker runs PII filter → judge (NIM/Gemini +
+    <code>LocalRuleJudge</code> fallback); tenant-scoped <code>GET /v1/jobs/{job_id}</code> with
+    <code>Cache-Control: no-store</code>. Write-gate eval beats M3 baseline: precision
+    <code>1.000</code> (+0.500), recall <code>1.000</code>. L4 VERIFY APPROVE
+    (claude-4.5-haiku-thinking); quiz-me Q+A logged.<br>
+    <b>Active loop:</b> NONE (next: G0 on M6) · <b>Current milestone:</b> M6 — Append-only audit
+    log + "why do you know this?" · <b>Phase:</b> 15 Governance &amp; Compliance<br>
     <b>Blocked on:</b> nothing.
   </div>
 
@@ -71,6 +71,12 @@
           <td><code>app/api/deps_auth.py</code> · <code>routes_memories.py</code> (<code>POST /v1/memories</code>) · <code>routes_retrieve.py</code> (<code>GET /v1/memories:retrieve</code>) · <code>app/embedding/local_encoder.py</code> (local 384d normalized encoder) · <code>app/retrieval/vector.py</code> (pgvector cosine search) · migrations <code>0004</code> HNSW + <code>0005</code> nonempty provenance · <code>evals/</code> labeled baseline/report</td>
           <td><span class="pill live">LIVE</span></td>
           <td>exact demo 9/9 · full suite 29/29 · invariants 7/7 · ruff+mypy clean · L4 VERIFY APPROVE (fresh claude-opus-5-thinking-high; no-network encode + metric-headroom probes passed) · Q+A in <code>checkpoints/M3.md</code></td>
+        </tr>
+        <tr>
+          <td>M5 — Async Write Gate (queue-backed) + pre-send PII filter</td>
+          <td><code>POST /v1/memories:evaluate</code> (202) · <code>GET /v1/jobs/{job_id}</code> (tenant-scoped, no-store) · <code>worker/queue.py</code> (Redis+RQ) · <code>worker/write_gate.py</code> · <code>worker/pii_filter.py</code> · <code>worker/llm_providers.py</code> · <code>app/domain/policy.py</code> · <code>evals/suites/write_gate.json</code></td>
+          <td><span class="pill live">LIVE</span></td>
+          <td>demo 14/14 exit 0 · write_gate eval precision 1.000 (+0.500 vs baseline) · ruff+mypy clean · L4 VERIFY APPROVE (claude-4.5-haiku-thinking; D1/D2 fixed after first REJECT) · Q+A in <code>checkpoints/M5.md</code></td>
         </tr>
       </tbody>
     </table>
@@ -109,7 +115,8 @@
   <h2>Known gaps &amp; the ordered Next list</h2>
   <div class="card">
     <ol>
-      <li>M4 G0 pre-flight, then L1 BUILD — fail-open retrieval, token budgeting, rank-aware placement, and per-item citations.</li>
+      <li>M6 G0 pre-flight, then L1 BUILD — append-only audit log and <code>GET /v1/memories/{id}/audit</code> (closes M5 rejected-trace durability gap).</li>
+      <li>M5 non-blocking follow-ups (see <code>checkpoints/M5.md</code>): D3 real NIM/Gemini provider path untested in CI; D4 move <code>set_judge_delay</code> hook to test fixtures only.</li>
       <li>M3 L4 non-blocking follow-ups (see <code>checkpoints/M3.md</code>): add retrieval recall/nDCG before M7; compare report <code>k</code>/shape/model as well as dataset id; persist per-hit scores; reject NULL provenance-array elements; consider encoder warm-up/health coverage.</li>
       <li>Remaining M2 follow-ups: audit append-only enforcement by M6; composite tenant-scoped FK by M9; parameterize 0003 role credentials; user-level policy in M9; <code>updated_at</code> trigger. M3 completed transaction-local GUC, all-public RLS inventory, UUID boundary validation, embedding index, and nonempty provenance.</li>
       <li>Non-blocking L4 follow-ups from M1 (fix in M5, see <code>checkpoints/M1.md</code>): worker healthcheck 30s vs 15s drift; shared <code>image:</code> tag for api/worker; centralize <code>HEARTBEAT_KEY</code> in <code>app/config.py</code>; invariant test should parse compose YAML and catch transitive imports.</li>
@@ -121,6 +128,13 @@
   <!-- ───────────── SESSION LOG (append-only) ───────────── -->
   <h2>Session log (append-only, newest first)</h2>
   <div class="card">
+    <p><code>2026-08-04</code> — <b>M5 DONE.</b> Shipped async Write Gate:
+       <code>POST /v1/memories:evaluate</code> (202), tenant-scoped job status, Redis+RQ worker,
+       PII pre-send filter, judge with NIM/Gemini + LocalRuleJudge fallback. L4 first REJECT
+       (30s delay test gap, cross-tenant job leak); fixed in iter 3; L4 retry APPROVE
+       (claude-4.5-haiku-thinking). Final gates: demo 14/14, write_gate precision 1.000 (+0.500 vs
+       baseline). Quiz-me Q+A logged. Added <code>Cache-Control: no-store</code> on job status.
+       Next: M6 G0.</p>
     <p><code>2026-08-01</code> — <b>M3 DONE.</b> Shipped authenticated naive writes and local
        vector-only retrieval with image-baked all-MiniLM-L6-v2, CPU-only PyTorch, cosine HNSW,
        transaction-local RLS tenant scope, and DB-enforced nonempty provenance. The first L4 rejected

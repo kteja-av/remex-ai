@@ -5,10 +5,12 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from app.domain.policy import payload_from_request
 from app.db.session import get_connection
 from app.domain.memory import MemoryType
 from app.embedding.local_encoder import EMBEDDING_DIMENSION, get_encoder
 from app.retrieval.vector import retrieve_similar, store_memory
+from worker.write_gate import evaluate_candidate
 
 
 def _load_suite(name: str) -> dict[str, Any]:
@@ -68,6 +70,21 @@ def evaluate_suite(name: str) -> dict[str, Any]:
 
     try:
         for candidate in suite["memories"]:
+            if name == "write_gate":
+                payload = payload_from_request(
+                    tenant_id=tenant_id,
+                    user_id=user_id,
+                    memory_type=MemoryType.SEMANTIC,
+                    content=candidate["content"],
+                    source_turn_ids=[uuid4()],
+                    importance=0.5,
+                )
+                result = evaluate_candidate(payload)
+                if result["outcome"] != "admitted":
+                    continue
+                labels_by_id[result["memory_id"]] = candidate["label"]
+                continue
+
             record = store_memory(
                 tenant_id=tenant_id,
                 user_id=user_id,

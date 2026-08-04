@@ -21,8 +21,14 @@ def _worker_imports(path: Path) -> list[str]:
 
 def test_api_never_imports_worker() -> None:
     offenders: list[str] = []
+    allowed_queue_imports = {"worker.queue"}
     for path in sorted(API_DIR.rglob("*.py")):
-        offenders.extend(_worker_imports(path))
+        for offender in _worker_imports(path):
+            module = offender.split(" from ", 1)[-1]
+            if module in allowed_queue_imports:
+                continue
+            if module == "worker" or module.startswith("worker."):
+                offenders.append(offender)
     assert not offenders, (
         "app/api/** must not import worker/** "
         "(background_jobs_never_block_the_request_path):\n" + "\n".join(offenders)

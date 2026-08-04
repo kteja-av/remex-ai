@@ -51,6 +51,8 @@ services:
     build: .
     command: ["python", "-m", "worker.main"]
     environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://cmis:cmis@postgres:5432/cmis}
+      APP_DATABASE_URL: ${APP_DATABASE_URL:-postgresql://cmis_app:cmis_app@postgres:5432/cmis}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       WORKER_HEARTBEAT_INTERVAL_SECONDS: ${WORKER_HEARTBEAT_INTERVAL_SECONDS:-5}
     volumes:

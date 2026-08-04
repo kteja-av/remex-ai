@@ -1,0 +1,69 @@
+{
+  "name": "write_gate",
+  "dataset_id": "cmis-labeled-conversations-v1",
+  "k": 2,
+  "memories": [
+    {
+      "label": "language",
+      "content": "The user prefers Python for programming.",
+      "should_admit": true
+    },
+    {
+      "label": "assistant_language",
+      "content": "The assistant recommended Python as a programming language.",
+      "should_admit": false
+    },
+    {
+      "label": "activity",
+      "content": "The user enjoys hiking in the mountains on weekends.",
+      "should_admit": true
+    },
+    {
+      "label": "assistant_activity",
+      "content": "The assistant suggested hiking in the mountains this weekend.",
+      "should_admit": false
+    },
+    {
+      "label": "location",
+      "content": "The user currently lives in Berlin.",
+      "should_admit": true
+    },
+    {
+      "label": "article_location",
+      "content": "A travel article in the conversation describes living in Berlin.",
+      "should_admit": false
+    },
+    {
+      "label": "theme",
+      "content": "The user prefers dark mode in software applications.",
+      "should_admit": true
+    },
+    {
+      "label": "product_theme",
+      "content": "The discussed software application supports dark mode.",
+      "should_admit": false
+    }
+  ],
+  "queries": [
+    {
+      "text": "Which coding language does the user like?",
+      "relevant": ["language"]
+    },
+    {
+      "text": "What outdoor activity does the user do on weekends?",
+      "relevant": ["activity"]
+    },
+    {
+      "text": "Where is the user based?",
+      "relevant": ["location"]
+    },
+    {
+      "text": "What interface appearance does the user prefer?",
+      "relevant": ["theme"]
+    },
+    {
+      "text": "What is the user's favorite sports team?",
+      "relevant": []
+    }
+  ]
+}
