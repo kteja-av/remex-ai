@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from app.domain.memory import MemoryType
+from app.audit.log import record_audit_event
+from app.domain.memory import AuditEvent, MemoryType
 from app.domain.policy import (
     AdmissionVerdict,
     EvaluateCandidate,
@@ -42,6 +43,17 @@ def evaluate_candidate(payload: dict[str, Any]) -> dict[str, Any]:
     pii = scan_text(candidate.content)
     if pii.status is PiiStatus.BLOCKED:
         trace = WriteGateTrace.blocked_by_pii(candidate=candidate, pii=pii)
+        record_audit_event(
+            tenant_id=candidate.tenant_id,
+            event=AuditEvent.REJECT,
+            actor=trace.actor,
+            source_turn_ids=candidate.source_turn_ids,
+            detail={
+                "outcome": "rejected",
+                "reason": "pii_blocked",
+                "write_gate_trace": trace.to_dict(),
+            },
+        )
         return {
             "outcome": "rejected",
             "reason": "pii_blocked",
@@ -57,6 +69,17 @@ def evaluate_candidate(payload: dict[str, Any]) -> dict[str, Any]:
     trace = WriteGateTrace.from_judge(candidate=candidate, pii=pii, judge=judge)
 
     if judge.verdict is not AdmissionVerdict.ADMIT:
+        record_audit_event(
+            tenant_id=candidate.tenant_id,
+            event=AuditEvent.REJECT,
+            actor=trace.actor,
+            source_turn_ids=candidate.source_turn_ids,
+            detail={
+                "outcome": "rejected",
+                "reason": "judge_reject",
+                "write_gate_trace": trace.to_dict(),
+            },
+        )
         return {
             "outcome": "rejected",
             "reason": "judge_reject",
@@ -64,6 +87,7 @@ def evaluate_candidate(payload: dict[str, Any]) -> dict[str, Any]:
         }
 
     encoder = get_encoder()
+    trace_dict = trace.to_dict()
     record = store_memory(
         tenant_id=candidate.tenant_id,
         user_id=candidate.user_id,
@@ -72,7 +96,8 @@ def evaluate_candidate(payload: dict[str, Any]) -> dict[str, Any]:
         source_turn_ids=candidate.source_turn_ids,
         importance=judge.importance or candidate.importance,
         embedding=encoder.encode(candidate.content),
-        write_gate_decision=trace.to_dict(),
+        write_gate_decision=trace_dict,
+        audit_actor=trace.actor,
     )
     return {
         "outcome": "admitted",

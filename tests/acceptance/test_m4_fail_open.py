@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from app.api.main import app
 from app.api.routes_retrieve import get_encoder_or_none
 from app.context.budgeter import estimate_tokens, place_head_tail
-from app.db.session import get_connection
+from tests.conftest import delete_tenant_memories
 from app.embedding.local_encoder import EMBEDDING_DIMENSION
 
 
@@ -26,11 +26,7 @@ def identity() -> dict[str, str]:
 def client(identity: dict[str, str]) -> Iterator[TestClient]:
     with TestClient(app) as test_client:
         yield test_client
-    with get_connection() as conn, conn.transaction():
-        conn.execute("SET LOCAL row_security = off")
-        conn.execute(
-            "DELETE FROM memories WHERE tenant_id = %s", (identity["tenant_id"],)
-        )
+    delete_tenant_memories(identity["tenant_id"])
 
 
 def _fast_encoder() -> MagicMock:

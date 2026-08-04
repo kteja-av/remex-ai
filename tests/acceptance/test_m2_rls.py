@@ -53,6 +53,9 @@ def seeded() -> Iterator[dict[str, object]]:
     with get_connection() as conn, conn.transaction():
         conn.execute("SET LOCAL row_security = off")
         conn.execute(
+            "SELECT set_config('app.bypass_audit_immutability', 'on', true)"
+        )
+        conn.execute(
             "DELETE FROM memory_audit WHERE tenant_id = ANY(%s)", ([tenant_a, tenant_b],)
         )
         conn.execute(

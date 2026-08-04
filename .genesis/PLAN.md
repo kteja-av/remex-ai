@@ -173,3 +173,10 @@ save, and what to fetch, backed by a thin key-value/file store and a large conte
   pre-send gate, `LocalRuleJudge` fallback. Frozen write_gate eval: precision 1.000, recall 1.000,
   precision@2 0.400 (delta precision +0.500 vs M3 baseline). Non-blocking: D3 (real LLM providers
   untested in CI), D4 (test delay hook in prod).
+- **M6 — Append-only audit log + "why do you know this?" · DONE 2026-08-04.** L1 BUILD (2 iters)
+  → G4 computed green (demo 8/8, full suite 63/63, invariants 17/17, ruff+mypy clean) → L4 REJECT
+  (D1 ruff F401, D2 in-tenant audit IDOR) → iter 2 fixes → L4 APPROVE (claude-opus-5-thinking-high)
+  → quiz-me Q+A logged. Live: migration `0006` append-only `memory_audit`, `record_audit_event`,
+  `GET /v1/memories/{id}/audit` (tenant + user scoped), audit on admit/reject via store_memory and
+  write_gate. Closes M5 rejected-trace durability gap. Non-blocking: reject rows API-invisible;
+  four event types deferred to M9; bypass GUC settable by any role.

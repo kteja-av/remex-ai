@@ -100,4 +100,7 @@ def test_rls_blocks_forged_tenant_claim(table: str) -> None:
     assert count is not None and count[0] == 0
     with get_connection() as conn, conn.transaction():
         conn.execute("SET LOCAL row_security = off")
+        conn.execute(
+            "SELECT set_config('app.bypass_audit_immutability', 'on', true)"
+        )
         conn.execute(f"DELETE FROM {table} WHERE tenant_id = %s", (victim,))  # noqa: S608

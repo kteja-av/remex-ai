@@ -10,13 +10,14 @@ from fastapi.testclient import TestClient
 from app.api.main import app
 from app.api.routes_retrieve import get_encoder_or_none
 from app.config import settings
-from app.db.session import get_connection, get_tenant_connection
+from app.db.session import get_tenant_connection
+from tests.conftest import delete_tenant_memories
 from app.domain.policy import AdmissionVerdict, JudgeVerdict
 from app.embedding.local_encoder import EMBEDDING_DIMENSION
 from evals.run import compare_reports, evaluate_suite
 from psycopg.rows import dict_row
 from worker import llm_providers
-from worker.queue import clear_queue_for_tests, set_queue_depth_for_tests
+from worker.queue import clear_queue_for_tests
 from worker.write_gate import set_judge_delay
 
 
@@ -47,11 +48,7 @@ def identity() -> dict[str, str]:
 def client(identity: dict[str, str]) -> Iterator[TestClient]:
     with TestClient(app) as test_client:
         yield test_client
-    with get_connection() as conn, conn.transaction():
-        conn.execute("SET LOCAL row_security = off")
-        conn.execute(
-            "DELETE FROM memories WHERE tenant_id = %s", (identity["tenant_id"],)
-        )
+    delete_tenant_memories(identity["tenant_id"])
 
 
 def _headers(identity: dict[str, str]) -> dict[str, str]:
@@ -208,7 +205,8 @@ def test_queue_at_capacity_returns_429_without_blocking(
     )
     monkeypatch.setattr("app.config.settings", async_settings)
     monkeypatch.setattr("worker.queue.settings", async_settings)
-    set_queue_depth_for_tests(async_settings.write_gate_max_queue_depth)
+    # Simulate saturated queue without depending on a live worker draining RQ jobs.
+    monkeypatch.setattr("app.api.routes_memories.queue_has_capacity", lambda: False)
 
     response = client.post(
         "/v1/memories:evaluate",

@@ -4,9 +4,10 @@ from uuid import UUID
 from psycopg.rows import dict_row
 from psycopg.types.json import Json
 
+from app.audit.log import record_audit_event
 from app.db.models import MemoryRecord
 from app.db.session import get_tenant_connection
-from app.domain.memory import MemoryType
+from app.domain.memory import AuditEvent, MemoryType
 from app.embedding.local_encoder import EMBEDDING_DIMENSION
 
 
@@ -34,7 +35,11 @@ def store_memory(
     embedding: list[float],
     importance: float = 0.5,
     write_gate_decision: dict | None = None,
+    audit_actor: str = "direct_write",
 ) -> MemoryRecord:
+    detail = (
+        {"write_gate_trace": write_gate_decision} if write_gate_decision else None
+    )
     with (
         get_tenant_connection(str(tenant_id)) as conn,
         conn.cursor(row_factory=dict_row) as cur,
@@ -61,8 +66,17 @@ def store_memory(
                 Json(write_gate_decision) if write_gate_decision else None,
             ),
         ).fetchone()
-    if row is None:
-        raise RuntimeError("memory insert returned no row")
+        if row is None:
+            raise RuntimeError("memory insert returned no row")
+        record_audit_event(
+            tenant_id=tenant_id,
+            event=AuditEvent.ADMIT,
+            actor=audit_actor,
+            source_turn_ids=source_turn_ids,
+            memory_id=row["id"],
+            detail=detail,
+            conn=conn,
+        )
     return MemoryRecord.from_row(row)
 
 

@@ -105,15 +105,3 @@ def clear_queue_for_tests() -> None:
     queue.empty()
     for key in connection.scan_iter(f"{SYNC_JOB_PREFIX}*"):
         connection.delete(key)
-
-
-def set_queue_depth_for_tests(depth: int) -> None:
-    """Test helper — fill the queue to simulate capacity pressure."""
-    queue = get_queue()
-    queue.empty()
-    for index in range(depth):
-        queue.enqueue(
-            "worker.write_gate.evaluate_candidate",
-            {"placeholder": index},
-            result_ttl=60,
-        )

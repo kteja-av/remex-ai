@@ -158,6 +158,12 @@ def evaluate_suite(name: str) -> dict[str, Any]:
     finally:
         with get_connection() as conn, conn.transaction():
             conn.execute("SET LOCAL row_security = off")
+            conn.execute(
+                "SELECT set_config('app.bypass_audit_immutability', 'on', true)"
+            )
+            conn.execute(
+                "DELETE FROM memory_audit WHERE tenant_id = %s", (tenant_id,)
+            )
             conn.execute("DELETE FROM memories WHERE tenant_id = %s", (tenant_id,))
 
 
