@@ -59,6 +59,10 @@ def seeded() -> Iterator[dict[str, object]]:
             "DELETE FROM memory_audit WHERE tenant_id = ANY(%s)", ([tenant_a, tenant_b],)
         )
         conn.execute(
+            "DELETE FROM memory_entity_links WHERE tenant_id = ANY(%s)",
+            ([tenant_a, tenant_b],),
+        )
+        conn.execute(
             "DELETE FROM memories WHERE tenant_id = ANY(%s)", ([tenant_a, tenant_b],)
         )
 

@@ -8,6 +8,11 @@ READ_PATH_ENTRYPOINTS = (
     ROOT / "app" / "api" / "routes_retrieve.py",
     ROOT / "app" / "context" / "budgeter.py",
     ROOT / "app" / "retrieval" / "vector.py",
+    ROOT / "app" / "retrieval" / "keyword.py",
+    ROOT / "app" / "retrieval" / "graph_links.py",
+    ROOT / "app" / "retrieval" / "hybrid.py",
+    ROOT / "app" / "retrieval" / "entities.py",
+    ROOT / "app" / "ranking" / "scorer.py",
     ROOT / "app" / "embedding" / "local_encoder.py",
 )
 

@@ -28,7 +28,12 @@ def test_retrieve_never_returns_5xx_when_postgres_unreachable(
         raise ConnectionError("boom")
 
     app.dependency_overrides[get_encoder_or_none] = _fast_encoder
-    monkeypatch.setattr("app.retrieval.vector.get_tenant_connection", _boom)
+    for module in (
+        "app.retrieval.vector",
+        "app.retrieval.keyword",
+        "app.retrieval.graph_links",
+    ):
+        monkeypatch.setattr(f"{module}.get_read_tenant_connection", _boom)
 
     response = client.get(
         "/v1/memories:retrieve",
@@ -68,7 +73,7 @@ def test_retrieve_failure_payload_is_empty_and_degraded(
 ) -> None:
     app.dependency_overrides[get_encoder_or_none] = _fast_encoder
     monkeypatch.setattr(
-        "app.api.routes_retrieve.retrieve_similar",
+        "app.api.routes_retrieve.retrieve_hybrid",
         MagicMock(side_effect=TimeoutError("timed out")),
     )
 

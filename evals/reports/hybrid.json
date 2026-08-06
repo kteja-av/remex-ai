@@ -1,0 +1,155 @@
+{
+  "schema_version": 2,
+  "suite": "hybrid",
+  "generated_at": "2026-08-05T23:13:23.080876+00:00",
+  "encoder": {
+    "model": "sentence-transformers/all-MiniLM-L6-v2",
+    "dimensions": 384,
+    "normalized": true
+  },
+  "dataset": {
+    "id": "cmis-hybrid-retrieval-v1",
+    "memory_count": 8,
+    "should_admit_count": 5,
+    "query_count": 5
+  },
+  "metrics": {
+    "precision": 0.625,
+    "recall": 1.0,
+    "precision_at_k": 0.5,
+    "k": 2
+  },
+  "metric_definitions": {
+    "precision": "admission precision over labeled candidates",
+    "recall": "admission recall over labeled candidates",
+    "precision_at_k": "micro retrieval precision across all returned top-k items"
+  },
+  "queries": [
+    {
+      "query": "What is the dog named Xerophyte?",
+      "relevant": [
+        "exact_name"
+      ],
+      "retrieved": [
+        "exact_name",
+        "generic_pet"
+      ],
+      "matched": 1
+    },
+    {
+      "query": "Who does Marcus Chen report to?",
+      "relevant": [
+        "manager",
+        "report_relation"
+      ],
+      "retrieved": [
+        "report_relation",
+        "manager"
+      ],
+      "matched": 2
+    },
+    {
+      "query": "What is the project codename Nightjar-17?",
+      "relevant": [
+        "project_codename"
+      ],
+      "retrieved": [
+        "project_codename",
+        "noise_project"
+      ],
+      "matched": 1
+    },
+    {
+      "query": "Who manages the neurology research lab?",
+      "relevant": [
+        "manager"
+      ],
+      "retrieved": [
+        "manager",
+        "noise_lab"
+      ],
+      "matched": 1
+    },
+    {
+      "query": "What is the user's favorite sports team?",
+      "relevant": [],
+      "retrieved": [
+        "noise_pet",
+        "exact_name"
+      ],
+      "matched": 0
+    }
+  ],
+  "vector_only_on_suite": {
+    "metrics": {
+      "precision": 0.625,
+      "recall": 1.0,
+      "precision_at_k": 0.4,
+      "k": 2
+    },
+    "queries": [
+      {
+        "query": "What is the dog named Xerophyte?",
+        "relevant": [
+          "exact_name"
+        ],
+        "retrieved": [
+          "exact_name",
+          "generic_pet"
+        ],
+        "matched": 1
+      },
+      {
+        "query": "Who does Marcus Chen report to?",
+        "relevant": [
+          "manager",
+          "report_relation"
+        ],
+        "retrieved": [
+          "report_relation",
+          "noise_project"
+        ],
+        "matched": 1
+      },
+      {
+        "query": "What is the project codename Nightjar-17?",
+        "relevant": [
+          "project_codename"
+        ],
+        "retrieved": [
+          "project_codename",
+          "noise_project"
+        ],
+        "matched": 1
+      },
+      {
+        "query": "Who manages the neurology research lab?",
+        "relevant": [
+          "manager"
+        ],
+        "retrieved": [
+          "noise_lab",
+          "manager"
+        ],
+        "matched": 1
+      },
+      {
+        "query": "What is the user's favorite sports team?",
+        "relevant": [],
+        "retrieved": [
+          "noise_pet",
+          "exact_name"
+        ],
+        "matched": 0
+      }
+    ]
+  },
+  "comparison_on_suite": {
+    "basis": "vector_only_on_suite",
+    "precision_at_k": 0.09999999999999998
+  },
+  "comparison": {
+    "basis": "vector_only_on_suite",
+    "precision_at_k": 0.09999999999999998
+  }
+}

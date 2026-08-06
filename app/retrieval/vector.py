@@ -6,9 +6,10 @@ from psycopg.types.json import Json
 
 from app.audit.log import record_audit_event
 from app.db.models import MemoryRecord
-from app.db.session import get_tenant_connection
+from app.db.session import get_read_tenant_connection, get_tenant_connection
 from app.domain.memory import AuditEvent, MemoryType
 from app.embedding.local_encoder import EMBEDDING_DIMENSION
+from app.retrieval.graph_links import index_entity_links
 
 
 @dataclass(frozen=True)
@@ -77,6 +78,13 @@ def store_memory(
             detail=detail,
             conn=conn,
         )
+        index_entity_links(
+            tenant_id=tenant_id,
+            user_id=user_id,
+            memory_id=row["id"],
+            content=content,
+            conn=conn,
+        )
     return MemoryRecord.from_row(row)
 
 
@@ -89,7 +97,7 @@ def retrieve_similar(
 ) -> list[VectorHit]:
     vector = _vector_literal(query_embedding)
     with (
-        get_tenant_connection(str(tenant_id)) as conn,
+        get_read_tenant_connection(str(tenant_id)) as conn,
         conn.cursor(row_factory=dict_row) as cur,
     ):
         rows = cur.execute(

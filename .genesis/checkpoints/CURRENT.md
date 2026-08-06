@@ -1,10 +1,10 @@
 # CURRENT
-- active_loop: NONE (M6 DONE — ready for M7 G0)
+- active_loop: L4 VERIFY APPROVE (iter 7) — quiz-me pending
 - target: M7 — Hybrid retrieval + ranking service
-- iteration: 0
-- last_gate: G5 (L4 VERIFY APPROVE + quiz-me logged)
-- last_action: quiz-me Q+A logged; M6 closed
-- next_action: M7 G0 Existence Pre-Flight
+- iteration: 7
+- last_gate: L4 VERIFY APPROVE (claude-opus-5-thinking-high, iter 7)
+- last_action: removed ineffective write-path ANALYZE; L4 APPROVE
+- next_action: quiz-me answers → mark M7 done (user request)
 - model: composer
-- verdict: M6 DONE
+- verdict: M7 L4 APPROVE — quiz-me pending
 - branch: uncommitted working tree

@@ -14,7 +14,7 @@ from app.context.budgeter import (
 )
 from app.domain.memory import MemoryType
 from app.embedding.local_encoder import Encoder, get_encoder
-from app.retrieval.vector import retrieve_similar
+from app.retrieval.hybrid import retrieve_hybrid
 
 router = APIRouter(prefix="/v1", tags=["retrieval"])
 logger = logging.getLogger(__name__)
@@ -67,9 +67,10 @@ def retrieve_memories(
     try:
         if encoder is None:
             return _degraded_response()
-        hits = retrieve_similar(
+        result = retrieve_hybrid(
             tenant_id=identity.tenant_id,
             user_id=identity.user_id,
+            query=query,
             query_embedding=encoder.encode(query),
             limit=limit,
         )
@@ -82,14 +83,14 @@ def retrieve_memories(
                 created_at=hit.memory.created_at,
                 score=hit.score,
             )
-            for hit in hits
+            for hit in result.hits
         ]
         packed = pack_into_budget(retrieved, token_budget)
         placed = place_head_tail(packed)
         return RetrieveResponse(
             memories=placed,
             token_count=total_token_count(placed),
-            degraded=False,
+            degraded=result.signals_degraded,
         )
     except Exception:
         logger.exception("retrieve degraded", exc_info=True)

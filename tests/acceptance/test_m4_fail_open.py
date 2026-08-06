@@ -69,7 +69,12 @@ def test_retrieve_returns_degraded_empty_when_postgres_unreachable(
         raise ConnectionError("postgres unreachable")
 
     app.dependency_overrides[get_encoder_or_none] = _fast_encoder
-    monkeypatch.setattr("app.retrieval.vector.get_tenant_connection", _boom)
+    for module in (
+        "app.retrieval.vector",
+        "app.retrieval.keyword",
+        "app.retrieval.graph_links",
+    ):
+        monkeypatch.setattr(f"{module}.get_read_tenant_connection", _boom)
 
     started = time.monotonic()
     response = client.get(

@@ -1,0 +1,69 @@
+{
+  "name": "hybrid",
+  "dataset_id": "cmis-hybrid-retrieval-v1",
+  "k": 2,
+  "memories": [
+    {
+      "label": "exact_name",
+      "content": "The user's dog is named Xerophyte.",
+      "should_admit": true
+    },
+    {
+      "label": "generic_pet",
+      "content": "The user mentioned having a pet animal at home.",
+      "should_admit": true
+    },
+    {
+      "label": "manager",
+      "content": "Dr. Helena Voss manages the neurology research lab.",
+      "should_admit": true
+    },
+    {
+      "label": "report_relation",
+      "content": "Marcus Chen reports directly to Dr. Helena Voss.",
+      "should_admit": true
+    },
+    {
+      "label": "noise_lab",
+      "content": "The assistant described a neurology lab in general terms.",
+      "should_admit": false
+    },
+    {
+      "label": "noise_pet",
+      "content": "The assistant asked whether the user likes animals.",
+      "should_admit": false
+    },
+    {
+      "label": "project_codename",
+      "content": "The user's current project codename is Nightjar-17.",
+      "should_admit": true
+    },
+    {
+      "label": "noise_project",
+      "content": "The assistant discussed software project planning in general.",
+      "should_admit": false
+    }
+  ],
+  "queries": [
+    {
+      "text": "What is the dog named Xerophyte?",
+      "relevant": ["exact_name"]
+    },
+    {
+      "text": "Who does Marcus Chen report to?",
+      "relevant": ["report_relation", "manager"]
+    },
+    {
+      "text": "What is the project codename Nightjar-17?",
+      "relevant": ["project_codename"]
+    },
+    {
+      "text": "Who manages the neurology research lab?",
+      "relevant": ["manager"]
+    },
+    {
+      "text": "What is the user's favorite sports team?",
+      "relevant": []
+    }
+  ]
+}
