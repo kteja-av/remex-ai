@@ -33,19 +33,20 @@
   <p class="sub"><b>Rolling source of truth for what is LIVE right now.</b> The wiki can lag; this file
      cannot. Read this on every session start to avoid rebuilding what exists. This is your
      <i>git-like restart point</i>: if context is lost, this file rehydrates you.
-     Last updated: <code>2026-08-04</code> · by loop: <code>L4 VERIFY M6 (done) → next G0 M7</code></p>
+     Last updated: <code>2026-08-07</code> · by loop: <code>L4 VERIFY M8 (done) → next G0 M9</code></p>
 
   <!-- ───────────── ONE-LINE STATUS ───────────── -->
   <div class="card live">
-    <b>M6 DONE:</b> Append-only audit log — every admit/reject writes an immutable
-    <code>memory_audit</code> row (actor, timestamp, <code>source_turn_ids</code>, optional
-    <code>write_gate_trace</code> in <code>detail</code>). <code>GET /v1/memories/{id}/audit</code>
-    returns the trail (tenant + user scoped). Migration <code>0006</code> revokes UPDATE/DELETE on
-    <code>cmis_app</code> + trigger guard. Closes M5 rejected-trace durability gap. L4 VERIFY APPROVE
-    (claude-opus-5-thinking-high; D1/D2 fixed after first REJECT); quiz-me Q+A logged.<br>
-    <b>Active loop:</b> NONE (next: G0 on M7) · <b>Current milestone:</b> M7 — Hybrid retrieval +
-    ranking service · <b>Phase:</b> 6 Memory Architecture<br>
-    <b>Blocked on:</b> nothing.
+    <b>M8 DONE:</b> Decay + reflection background jobs — absolute unused-age tiers on
+    <code>decay_weight</code> (30/60/90) with archive at threshold; reflection summaries as
+    derived <code>memory_reflections</code> rows linked by source fingerprint; both scheduled
+    off the request path. Retrieve best-effort <code>last_accessed_at</code> touch uses the
+    lock-timeout-bounded read connection so decay row locks cannot stall the API.
+    L4 VERIFY APPROVE (gpt-5.6-sol-medium after D1/D2 fix); quiz-me Q+A logged.<br>
+    <b>Active loop:</b> NONE (next: G0 on M9) · <b>Current milestone:</b> M9 — Human override,
+    deletion, and conflict resolution · <b>Phase:</b> 19 HITL<br>
+    <b>Blocked on:</b> nothing. <span class="note">Note: M7 L4 APPROVE but quiz-me Q+A still
+    pending in <code>checkpoints/M7.md</code>.</span>
   </div>
 
   <!-- ───────────── WHAT'S LIVE ───────────── -->
@@ -84,6 +85,12 @@
           <td><span class="pill live">LIVE</span></td>
           <td>demo 8/8 exit 0 · full suite 63/63 · invariants 17/17 · ruff+mypy clean · L4 VERIFY APPROVE (claude-opus-5-thinking-high; D1/D2 fixed after first REJECT) · Q+A in <code>checkpoints/M6.md</code></td>
         </tr>
+        <tr>
+          <td>M8 — Decay + reflection background jobs</td>
+          <td><code>migrations/versions/0010_decay_reflection.py</code> (<code>last_accessed_at</code>, <code>memory_reflections</code> + RLS) · <code>worker/decay_job.py</code> · <code>worker/reflection_agent.py</code> · <code>worker/main.py</code> (maintenance loop) · <code>app/db/session.py</code> (<code>lock_timeout</code> on read path) · <code>app/retrieval/vector.py</code> (<code>touch_last_accessed</code>) · <code>tests/acceptance/test_m8_decay.py</code></td>
+          <td><span class="pill live">LIVE</span></td>
+          <td>demo 9/9 · full suite 87/87 · invariants 17/17 · ruff+mypy clean · L4 VERIFY APPROVE (gpt-5.6-sol-medium; D1/D2 fixed after first REJECT; 0.1787s lock-contention probe) · Q+A in <code>checkpoints/M8.md</code></td>
+        </tr>
       </tbody>
     </table>
     <p class="note">Append a row the moment a milestone passes L4 VERIFY. The grep in G0 checks against this table.</p>
@@ -121,13 +128,14 @@
   <h2>Known gaps &amp; the ordered Next list</h2>
   <div class="card">
     <ol>
-      <li>M7 G0 pre-flight, then L1 BUILD — hybrid retrieval (tsvector + graph) + ranking service.</li>
+      <li>M9 G0 pre-flight, then L1 BUILD — human override, deletion, conflict resolution (cleanup of reflection summaries whose sources are all gone is an M8→M9 dependency).</li>
+      <li>M7 quiz-me Q+A still pending in <code>checkpoints/M7.md</code> (L4 APPROVE already logged; not marked DONE in PLAN progress).</li>
+      <li>M8 non-blocking follow-ups (see <code>checkpoints/M8.md</code>): pass <code>READ_PATH_*</code> into api in compose; concurrent decay audit duplication under multi-worker; dangling <code>source_memory_ids</code>; summary text is concatenation; per-row decay + O(k²) clustering scale.</li>
       <li>M6 non-blocking follow-ups (see <code>checkpoints/M6.md</code>): reject audit rows API-invisible; four event types (update/supersede/archive/delete) deferred to M9; bypass GUC settable by any role; trail ordering at supersede; direct_write ADMIT with null detail.</li>
       <li>M5 non-blocking follow-ups (see <code>checkpoints/M5.md</code>): D3 real NIM/Gemini provider path untested in CI; D4 move <code>set_judge_delay</code> hook to test fixtures only.</li>
-      <li>M3 L4 non-blocking follow-ups (see <code>checkpoints/M3.md</code>): add retrieval recall/nDCG before M7; compare report <code>k</code>/shape/model as well as dataset id; persist per-hit scores; reject NULL provenance-array elements; consider encoder warm-up/health coverage.</li>
-      <li>Remaining M2 follow-ups: composite tenant-scoped FK by M9; parameterize 0003 role credentials; user-level policy in M9; <code>updated_at</code> trigger. M3 completed transaction-local GUC, all-public RLS inventory, UUID boundary validation, embedding index, and nonempty provenance. M6 completed audit append-only enforcement (0006).</li>
-      <li>Non-blocking L4 follow-ups from M1 (fix in M5, see <code>checkpoints/M1.md</code>): worker healthcheck 30s vs 15s drift; shared <code>image:</code> tag for api/worker; centralize <code>HEARTBEAT_KEY</code> in <code>app/config.py</code>; invariant test should parse compose YAML and catch transitive imports.</li>
-      <li>Remaining deferred invariant tests land with their milestone (fail-open → M4; PII precedence → M5).</li>
+      <li>M3 L4 non-blocking follow-ups (see <code>checkpoints/M3.md</code>): add retrieval recall/nDCG; compare report <code>k</code>/shape/model as well as dataset id; persist per-hit scores; reject NULL provenance-array elements; consider encoder warm-up/health coverage.</li>
+      <li>Remaining M2 follow-ups: composite tenant-scoped FK by M9; parameterize 0003 role credentials; user-level policy in M9; <code>updated_at</code> trigger.</li>
+      <li>Non-blocking L4 follow-ups from M1 (see <code>checkpoints/M1.md</code>): worker healthcheck 30s vs 15s drift; shared <code>image:</code> tag for api/worker; centralize <code>HEARTBEAT_KEY</code>; invariant test should parse compose YAML and catch transitive imports.</li>
     </ol>
     <p class="note">Mirror of <code>checkpoints/CURRENT.md → next_action</code>, but human-readable and durable across compaction.</p>
   </div>
@@ -135,6 +143,14 @@
   <!-- ───────────── SESSION LOG (append-only) ───────────── -->
   <h2>Session log (append-only, newest first)</h2>
   <div class="card">
+    <p><code>2026-08-07</code> — <b>M8 DONE.</b> Shipped decay + reflection off the request path:
+       migration <code>0010</code> (<code>last_accessed_at</code>, <code>memory_reflections</code>),
+       absolute unused-age tiers + archive, entity-cluster reflection summaries, worker
+       maintenance loop, bounded retrieve access touch. L4 first REJECT (unbounded touch
+       stalled behind decay row lock; sleep-based latency test); fixed with
+       <code>lock_timeout</code> + real contention regression; L4 retry APPROVE
+       (gpt-5.6-sol-medium; 0.1787s probe). Final gates: demo 9/9, suite 87/87, invariants 17/17.
+       Quiz-me Q+A logged. Next: M9 G0. (M7 still has quiz-me pending.)</p>
     <p><code>2026-08-04</code> — <b>M6 DONE.</b> Shipped append-only audit log:
        <code>record_audit_event</code>, migration <code>0006</code> (revoke + triggers),
        <code>GET /v1/memories/{id}/audit</code> (tenant + user scoped), audit on admit/reject via

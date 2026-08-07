@@ -88,6 +88,35 @@ def store_memory(
     return MemoryRecord.from_row(row)
 
 
+def touch_last_accessed(
+    *,
+    tenant_id: UUID,
+    user_id: UUID,
+    memory_ids: list[UUID],
+) -> None:
+    """Mark memories as used — best-effort, and bounded like every read-path query.
+
+    Uses the read connection so a background decay job holding these rows cannot
+    stall the request: the lock wait is cancelled and the caller degrades instead.
+    """
+    if not memory_ids:
+        return
+    with (
+        get_read_tenant_connection(str(tenant_id)) as conn,
+        conn.cursor() as cur,
+    ):
+        cur.execute(
+            """
+            UPDATE memories
+            SET last_accessed_at = now()
+            WHERE user_id = %s
+              AND id = ANY(%s)
+              AND status = 'active'
+            """,
+            (user_id, memory_ids),
+        )
+
+
 def retrieve_similar(
     *,
     tenant_id: UUID,

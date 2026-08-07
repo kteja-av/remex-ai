@@ -180,3 +180,13 @@ save, and what to fetch, backed by a thin key-value/file store and a large conte
   `GET /v1/memories/{id}/audit` (tenant + user scoped), audit on admit/reject via store_memory and
   write_gate. Closes M5 rejected-trace durability gap. Non-blocking: reject rows API-invisible;
   four event types deferred to M9; bypass GUC settable by any role.
+- **M8 — Decay + reflection background jobs · DONE 2026-08-07.** L1 BUILD (2 iters) →
+  G4 computed green (demo 9/9, full suite 87/87, invariants 17/17, ruff+mypy clean) →
+  L4 REJECT (D1 unbounded last-access touch stalled retrieve behind decay row lock;
+  D2 sleep-based latency test could not detect contention) → iter 2: read-path
+  `lock_timeout` + real lock-contention regression (proven to fail without the fix) →
+  L4 APPROVE (gpt-5.6-sol-medium; 0.1787s contention retrieve) → quiz-me Q+A logged.
+  Live: migration `0010` (`last_accessed_at`, `memory_reflections` + RLS), worker
+  `decay_job` / `reflection_agent` + maintenance loop, retrieve best-effort access touch.
+  Non-blocking: compose does not pass `READ_PATH_*` into api; concurrent decay audit
+  duplication; dangling source UUID arrays for M9; summary text is concatenation.

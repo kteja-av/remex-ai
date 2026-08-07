@@ -32,6 +32,14 @@ class Settings:
     gemini_api_key: str | None
     ranking_weights: RankingWeights
     read_path_statement_timeout_ms: int
+    read_path_lock_timeout_ms: int
+    decay_interval_seconds: float
+    reflection_interval_seconds: float
+    decay_weight_after_30_days: float
+    decay_weight_after_60_days: float
+    decay_weight_after_90_days: float
+    decay_archive_threshold: float
+    reflection_min_cluster_size: int
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -86,6 +94,30 @@ class Settings:
             ranking_weights=ranking_weights,
             read_path_statement_timeout_ms=int(
                 os.environ.get("READ_PATH_STATEMENT_TIMEOUT_MS", "150")
+            ),
+            read_path_lock_timeout_ms=int(
+                os.environ.get("READ_PATH_LOCK_TIMEOUT_MS", "50")
+            ),
+            decay_interval_seconds=float(
+                os.environ.get("DECAY_INTERVAL_SECONDS", "3600")
+            ),
+            reflection_interval_seconds=float(
+                os.environ.get("REFLECTION_INTERVAL_SECONDS", "3600")
+            ),
+            decay_weight_after_30_days=float(
+                os.environ.get("DECAY_WEIGHT_AFTER_30_DAYS", "0.70")
+            ),
+            decay_weight_after_60_days=float(
+                os.environ.get("DECAY_WEIGHT_AFTER_60_DAYS", "0.40")
+            ),
+            decay_weight_after_90_days=float(
+                os.environ.get("DECAY_WEIGHT_AFTER_90_DAYS", "0.10")
+            ),
+            decay_archive_threshold=float(
+                os.environ.get("DECAY_ARCHIVE_THRESHOLD", "0.15")
+            ),
+            reflection_min_cluster_size=int(
+                os.environ.get("REFLECTION_MIN_CLUSTER_SIZE", "2")
             ),
         )
 

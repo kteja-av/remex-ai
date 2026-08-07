@@ -14,6 +14,9 @@ def delete_tenant_memories(tenant_id: str) -> None:
         )
         conn.execute("DELETE FROM memory_audit WHERE tenant_id = %s", (tenant_id,))
         conn.execute(
+            "DELETE FROM memory_reflections WHERE tenant_id = %s", (tenant_id,)
+        )
+        conn.execute(
             "DELETE FROM memory_entity_links WHERE tenant_id = %s", (tenant_id,)
         )
         conn.execute("DELETE FROM memories WHERE tenant_id = %s", (tenant_id,))

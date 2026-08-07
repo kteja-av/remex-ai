@@ -1,10 +1,11 @@
 # CURRENT
-- active_loop: L4 VERIFY APPROVE (iter 7) — quiz-me pending
-- target: M7 — Hybrid retrieval + ranking service
-- iteration: 7
-- last_gate: L4 VERIFY APPROVE (claude-opus-5-thinking-high, iter 7)
-- last_action: removed ineffective write-path ANALYZE; L4 APPROVE
-- next_action: quiz-me answers → mark M7 done (user request)
-- model: composer
-- verdict: M7 L4 APPROVE — quiz-me pending
-- branch: uncommitted working tree
+- active_loop: NONE
+- target: M8 — Decay + reflection background jobs · **DONE**
+- iteration: 2 (final)
+- last_gate: L4 APPROVE + quiz-me Q+A logged
+- last_action: quiz-me answers logged; M8 marked done
+- next_action: G0 on M9 — Human override, deletion, and conflict resolution (M7 quiz-me still pending if marking M7 done later)
+- model: cursor-grok (builder) / gpt-5.6-sol-medium (L4)
+- tokens_budget: 50000
+- skills_loaded: [agentic-swe-master, modular-architecture, production-readiness, data-systems-engineering, llmops-ai-agents]
+- note: no git commit (user request); M7 L4 APPROVE but quiz-me answers still pending in checkpoints/M7.md

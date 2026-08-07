@@ -15,6 +15,7 @@ from app.context.budgeter import (
 from app.domain.memory import MemoryType
 from app.embedding.local_encoder import Encoder, get_encoder
 from app.retrieval.hybrid import retrieve_hybrid
+from app.retrieval.vector import touch_last_accessed
 
 router = APIRouter(prefix="/v1", tags=["retrieval"])
 logger = logging.getLogger(__name__)
@@ -87,6 +88,14 @@ def retrieve_memories(
         ]
         packed = pack_into_budget(retrieved, token_budget)
         placed = place_head_tail(packed)
+        try:
+            touch_last_accessed(
+                tenant_id=identity.tenant_id,
+                user_id=identity.user_id,
+                memory_ids=[item.id for item in placed],
+            )
+        except Exception:
+            logger.exception("last_accessed touch failed; continuing")
         return RetrieveResponse(
             memories=placed,
             token_count=total_token_count(placed),
